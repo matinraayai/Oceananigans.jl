@@ -38,15 +38,7 @@ function update_state!(model::HydrostaticFreeSurfaceModel)
 
     fill_halo_regions!(model.diffusivities, model.architecture, model.clock, fields(model))
 
-    # Calculate hydrostatic pressure
-    pressure_calculation = launch!(model.architecture, model.grid, Val(:xy), update_hydrostatic_pressure!,
-                                   model.pressure.pHY′, model.grid, model.buoyancy, model.tracers,
-                                   dependencies=Event(device(model.architecture)))
-
-    # Fill halo regions for pressure
-    wait(device(model.architecture), pressure_calculation)
-
-    fill_halo_regions!(model.pressure.pHY′, model.architecture)
+    calculate_kinematic_baroclinic_pressure!(model)
 
     return nothing
 end

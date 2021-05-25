@@ -29,7 +29,7 @@ implicitly during time-stepping.
                                                               tracers,
                                                               buoyancy,
                                                               diffusivities,
-                                                              hydrostatic_pressure_anomaly,
+                                                              baroclinic_pressure,
                                                               auxiliary_fields,
                                                               forcings,
                                                               clock)
@@ -39,7 +39,7 @@ implicitly during time-stepping.
     return ( - U_dot_∇u(i, j, k, grid, advection, velocities)
              - explicit_barotropic_pressure_x_gradient(i, j, k, grid, free_surface)
              - x_f_cross_U(i, j, k, grid, coriolis, velocities)
-             - ∂xᶠᶜᵃ(i, j, k, grid, hydrostatic_pressure_anomaly)
+             - baroclinic_pressure_x_gradient(i, j, k, grid, baroclinic_pressure)
              - ∂ⱼ_τ₁ⱼ(i, j, k, grid, closure, clock, velocities, diffusivities, tracers, buoyancy)
              + forcings.u(i, j, k, grid, clock, hydrostatic_prognostic_fields(velocities, free_surface, tracers)))
 end
@@ -64,7 +64,7 @@ implicitly during time-stepping.
                                                               tracers,
                                                               buoyancy,
                                                               diffusivities,
-                                                              hydrostatic_pressure_anomaly,
+                                                              baroclinic_pressure,
                                                               auxiliary_fields,
                                                               forcings,
                                                               clock)
@@ -74,7 +74,7 @@ implicitly during time-stepping.
     return ( - U_dot_∇v(i, j, k, grid, advection, velocities)
              - explicit_barotropic_pressure_y_gradient(i, j, k, grid, free_surface)
              - y_f_cross_U(i, j, k, grid, coriolis, velocities)
-             - ∂yᶜᶠᵃ(i, j, k, grid, hydrostatic_pressure_anomaly)
+             - baroclinic_pressure_y_gradient(i, j, k, grid, baroclinic_pressure)
              - ∂ⱼ_τ₂ⱼ(i, j, k, grid, closure, clock, velocities, diffusivities, tracers, buoyancy)
              + forcings.v(i, j, k, grid, clock, hydrostatic_prognostic_fields(velocities, free_surface, tracers)))
 end

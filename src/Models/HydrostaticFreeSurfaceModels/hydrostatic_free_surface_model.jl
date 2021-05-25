@@ -24,27 +24,25 @@ validate_tracer_advection(invalid_tracer_advection, grid) = error("$invalid_trac
 validate_tracer_advection(tracer_advection_tuple::NamedTuple, grid) = CenteredSecondOrder(), tracer_advection_tuple
 validate_tracer_advection(tracer_advection::AbstractAdvectionScheme, grid) = tracer_advection, NamedTuple()
 
-PressureField(arch, grid) = (pHY′ = CenterField(arch, grid, TracerBoundaryConditions(grid)),)
-
 mutable struct HydrostaticFreeSurfaceModel{TS, E, A<:AbstractArchitecture, S,
                                            G, T, V, B, R, F, P, U, C, Φ, K, AF} <: AbstractModel{TS}
 
-        architecture :: A        # Computer `Architecture` on which `Model` is run
-                grid :: G        # Grid of physical points on which `Model` is solved
-               clock :: Clock{T} # Tracks iteration number and simulation time of `Model`
-           advection :: V        # Advection scheme for tracers
-            buoyancy :: B        # Set of parameters for buoyancy model
-            coriolis :: R        # Set of parameters for the background rotation rate of `Model`
-        free_surface :: S        # Free surface parameters and fields
-             forcing :: F        # Container for forcing functions defined by the user
-             closure :: E        # Diffusive 'turbulence closure' for all model fields
-           particles :: P        # Particle set for Lagrangian tracking
-          velocities :: U        # Container for velocity fields `u`, `v`, and `w`
-             tracers :: C        # Container for tracer fields
-            pressure :: Φ        # Container for hydrostatic pressure
-       diffusivities :: K        # Container for turbulent diffusivities
-         timestepper :: TS       # Object containing timestepper fields and parameters
-    auxiliary_fields :: AF       # User-specified auxiliary fields for forcing functions and boundary conditions
+           architecture :: A        # Computer `Architecture` on which `Model` is run
+                   grid :: G        # Grid of physical points on which `Model` is solved
+                  clock :: Clock{T} # Tracks iteration number and simulation time of `Model`
+              advection :: V        # Advection scheme for tracers
+               buoyancy :: B        # Set of parameters for buoyancy model
+               coriolis :: R        # Set of parameters for the background rotation rate of `Model`
+           free_surface :: S        # Free surface parameters and fields
+                forcing :: F        # Container for forcing functions defined by the user
+                closure :: E        # Diffusive 'turbulence closure' for all model fields
+              particles :: P        # Particle set for Lagrangian tracking
+             velocities :: U        # Container for velocity fields `u`, `v`, and `w`
+                tracers :: C        # Container for tracer fields
+    baroclinic_pressure :: Φ        # Container for the baroclinic component of hydrostatic pressure
+          diffusivities :: K        # Container for turbulent diffusivities
+            timestepper :: TS       # Object containing timestepper fields and parameters
+       auxiliary_fields :: AF       # User-specified auxiliary fields for forcing functions and boundary conditions
 end
 
 """
@@ -136,10 +134,10 @@ function HydrostaticFreeSurfaceModel(; grid,
     closure = with_tracers(tracernames(tracers), closure)
 
     # Either check grid-correctness, or construct tuples of fields
-    velocities    = HydrostaticFreeSurfaceVelocityFields(velocities, architecture, grid, clock, boundary_conditions)
-    tracers       = TracerFields(tracers, architecture, grid, boundary_conditions)
-    pressure      = PressureField(architecture, grid)
-    diffusivities = DiffusivityFields(diffusivities, architecture, grid, tracernames(tracers), boundary_conditions, closure)
+    velocities          = HydrostaticFreeSurfaceVelocityFields(velocities, architecture, grid, clock, boundary_conditions)
+    tracers             = TracerFields(tracers, architecture, grid, boundary_conditions)
+    baroclinic_pressure = KinematicBaroclinicPressure(pressure, architecture, grid)
+    diffusivities       = DiffusivityFields(diffusivities, architecture, grid, tracernames(tracers), boundary_conditions, closure)
 
     validate_velocity_boundary_conditions(velocities)
 

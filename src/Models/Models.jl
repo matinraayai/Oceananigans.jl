@@ -15,8 +15,8 @@ device_event(model::AbstractModel) = device_event(model.architecture)
 
 abstract type AbstractIncompressibleModel{TS} <: AbstractModel{TS} end
 
-include("IncompressibleModels/IncompressibleModels.jl")
 include("HydrostaticFreeSurfaceModels/HydrostaticFreeSurfaceModels.jl")
+include("IncompressibleModels/IncompressibleModels.jl")
 include("ShallowWaterModels/ShallowWaterModels.jl")
 
 using .IncompressibleModels: IncompressibleModel, NonDimensionalIncompressibleModel
