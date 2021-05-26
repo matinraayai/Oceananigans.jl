@@ -8,14 +8,14 @@ time(model) = model.clock.time
 time(::Nothing) = nothing
 
 function compute_and_slice_output(field::AbstractField, model, field_slicer)
-    compute_at!(field, time(model))
+    CUDA.@sync compute_at!(field, time(model))
     return slice_parent(field_slicer, field)
 end
 
 compute_and_slice_output(output, model, field_slicer) = output
 
 fetch_output(output, model, field_slicer) = compute_and_slice_output(output(model), model, field_slicer)
-fetch_output(field::AbstractField, model, field_slicer) = compute_and_slice_output(field, model, field_slicer)
+fetch_output(field::AbstractField, model, field_slicer) = CUDA.@sync compute_and_slice_output(field, model, field_slicer)
 
 function fetch_output(lagrangian_particles::LagrangianParticles, model, field_slicer)
     particle_properties = lagrangian_particles.properties

@@ -61,6 +61,7 @@ Compute the average of `avg.operand` and store the result in `avg.data`.
 """
 function compute!(avg::AveragedField, time=nothing)
     compute_at!(avg.operand, time)
+    avg .= 0
     CUDA.@sync mean!(avg, avg.operand)
     return nothing
 end
