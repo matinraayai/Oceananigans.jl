@@ -17,7 +17,7 @@ end
 
 TestModel_VerticallyStrectedRectGrid(arch, FT, ν=1.0, Δx=0.5) =
     IncompressibleModel(
-          grid = VerticallyStretchedRectilinearGrid(FT, architecture = arch, size=(3, 3, 3), x=(0, 3Δx), y=(0, 3Δx), zF=0:Δx:3Δx,),
+          grid = VerticallyStretchedRectilinearGrid(FT, architecture = arch, size=(3, 3, 3), x=(0, 3Δx), y=(0, 3Δx), z_faces=0:Δx:3Δx,),
        closure = IsotropicDiffusivity(FT, ν=ν, κ=ν),
   architecture = arch,
     float_type = FT
@@ -37,7 +37,7 @@ function diagnostic_windowed_spatial_average(arch, FT)
     set!(model.velocities.u, 7)
     slicer = FieldSlicer(i=model.grid.Nx÷2:model.grid.Nx, k=1)
     u_mean = WindowedSpatialAverage(model.velocities.u; dims=(1, 2), field_slicer=slicer)
-    return u_mean(model)[1] == 7
+    return CUDA.@allowscalar u_mean(model)[1] == 7
 end
 
 function diffusive_cfl_diagnostic_is_correct(arch, FT)
@@ -103,7 +103,7 @@ function accurate_advective_cfl_on_regular_grid(arch, FT)
 end
 
 function accurate_advective_cfl_on_stretched_grid(arch, FT)
-    grid = VerticallyStretchedRectilinearGrid(architecture=arch, size=(4, 4, 8), x=(0, 100), y=(0, 100), zF=[k^2 for k in 0:8])
+    grid = VerticallyStretchedRectilinearGrid(architecture=arch, size=(4, 4, 8), x=(0, 100), y=(0, 100), z_faces=[k^2 for k in 0:8])
     model = IncompressibleModel(grid=grid, architecture=arch)
 
     Δt = FT(15.5)
@@ -112,7 +112,7 @@ function accurate_advective_cfl_on_stretched_grid(arch, FT)
     Δy = model.grid.Δy
 
     # At k = 1, w = 0 so the CFL constraint happens at the second face (k = 2).
-    CUDA.@allowscalar Δz_min = Oceananigans.Operators.Δzᵃᵃᶠ(1, 1, 2, grid)
+    Δz_min = CUDA.@allowscalar Oceananigans.Operators.Δzᵃᵃᶠ(1, 1, 2, grid)
 
     u₀ = FT(1.2)
     v₀ = FT(-2.5)
@@ -136,10 +136,10 @@ function accurate_advective_cfl_on_lat_lon_grid(arch, FT)
     Nx, Ny, Nz = size(grid)
 
     # Will be the smallest at higher latitudes.
-    CUDA.@allowscalar Δx_min = Oceananigans.Operators.Δxᶠᶜᵃ(1, Ny, 1, grid)
+    Δx_min = CUDA.@allowscalar Oceananigans.Operators.Δxᶠᶜᵃ(1, Ny, 1, grid)
 
     # Will be the same at every grid point.
-    CUDA.@allowscalar Δy_min = Oceananigans.Operators.Δyᶜᶠᵃ(1, 1, 1, grid)
+    Δy_min = CUDA.@allowscalar Oceananigans.Operators.Δyᶜᶠᵃ(1, 1, 1, grid)
 
     Δz = model.grid.Δz
 

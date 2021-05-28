@@ -1,8 +1,4 @@
-using DataDeps
-
 using Oceananigans.Grids: total_extent, halo_size
-
-ENV["DATADEPS_ALWAYS_ACCEPT"] = "true"
 
 #####
 ##### Regular rectilinear grids
@@ -166,21 +162,13 @@ function test_xnode_ynode_znode_are_correct(FT)
     grid = RegularRectilinearGrid(FT, size=(N, N, N), x=(0, π), y=(0, π), z=(0, π),
                                   topology=(Periodic, Periodic, Bounded))
 
-    @test xnode(Center, 2, grid) ≈ FT(π/2)
-    @test ynode(Center, 2, grid) ≈ FT(π/2)
-    @test znode(Center, 2, grid) ≈ FT(π/2)
+    @test xnode(Center(), 2, grid) ≈ FT(π/2)
+    @test ynode(Center(), 2, grid) ≈ FT(π/2)
+    @test znode(Center(), 2, grid) ≈ FT(π/2)
 
-    @test xnode(Face, 2, grid) ≈ FT(π/3)
-    @test ynode(Face, 2, grid) ≈ FT(π/3)
-    @test znode(Face, 2, grid) ≈ FT(π/3)
-
-    @test xC(2, grid) == xnode(Center, 2, grid)
-    @test yC(2, grid) == ynode(Center, 2, grid)
-    @test zC(2, grid) == znode(Center, 2, grid)
-
-    @test xF(2, grid) == xnode(Face, 2, grid)
-    @test yF(2, grid) == ynode(Face, 2, grid)
-    @test zF(2, grid) == znode(Face, 2, grid)
+    @test xnode(Face(), 2, grid) ≈ FT(π/3)
+    @test ynode(Face(), 2, grid) ≈ FT(π/3)
+    @test znode(Face(), 2, grid) ≈ FT(π/3)
 
     return nothing
 end
@@ -247,7 +235,6 @@ function flat_extent_regular_rectilinear_grid(FT; topology, size, extent)
     return grid.Lx, grid.Ly, grid.Lz
 end
 
-
 function test_flat_size_regular_rectilinear_grid(FT)
     @test flat_size_regular_rectilinear_grid(FT, topology=(Flat, Periodic, Periodic), size=(2, 3), extent=(1, 1)) === (1, 2, 3)
     @test flat_size_regular_rectilinear_grid(FT, topology=(Periodic, Flat, Bounded),  size=(2, 3), extent=(1, 1)) === (2, 1, 3)
@@ -295,7 +282,7 @@ end
 #####
 
 function test_vertically_stretched_grid_properties_are_same_type(FT, arch)
-    grid = VerticallyStretchedRectilinearGrid(FT, architecture=arch, size=(1, 1, 16), x=(0,1), y=(0,1), zF=collect(0:16))
+    grid = VerticallyStretchedRectilinearGrid(FT, architecture=arch, size=(1, 1, 16), x=(0,1), y=(0,1), z_faces=collect(0:16))
 
     @test grid.Lx isa FT
     @test grid.Ly isa FT
@@ -317,7 +304,7 @@ function test_vertically_stretched_grid_properties_are_same_type(FT, arch)
 end
 
 function test_architecturally_correct_stretched_grid(FT, arch, zF)
-    grid = VerticallyStretchedRectilinearGrid(FT, architecture=arch, size=(1, 1, length(zF)-1), x=(0, 1), y=(0, 1), zF=zF)
+    grid = VerticallyStretchedRectilinearGrid(FT, architecture=arch, size=(1, 1, length(zF)-1), x=(0, 1), y=(0, 1), z_faces=zF)
 
     ArrayType = array_type(arch)
     @test grid.zᵃᵃᶠ  isa OffsetArray{FT, 1, <:ArrayType}
@@ -329,7 +316,7 @@ function test_architecturally_correct_stretched_grid(FT, arch, zF)
 end
 
 function test_correct_constant_grid_spacings(FT, Nz)
-    grid = VerticallyStretchedRectilinearGrid(FT, size=(1, 1, Nz), x=(0, 1), y=(0, 1), zF=collect(0:Nz))
+    grid = VerticallyStretchedRectilinearGrid(FT, size=(1, 1, Nz), x=(0, 1), y=(0, 1), z_faces=collect(0:Nz))
 
     @test all(grid.Δzᵃᵃᶜ .== 1)
     @test all(grid.Δzᵃᵃᶠ .== 1)
@@ -338,7 +325,7 @@ function test_correct_constant_grid_spacings(FT, Nz)
 end
 
 function test_correct_quadratic_grid_spacings(FT, Nz)
-    grid = VerticallyStretchedRectilinearGrid(FT, size=(1, 1, Nz), x=(0, 1), y=(0, 1), zF=collect(0:Nz).^2)
+    grid = VerticallyStretchedRectilinearGrid(FT, size=(1, 1, Nz), x=(0, 1), y=(0, 1), z_faces=collect(0:Nz).^2)
 
      zF(k) = (k-1)^2
      zC(k) = (k^2 + (k-1)^2) / 2
@@ -360,7 +347,7 @@ function test_correct_tanh_grid_spacings(FT, Nz)
     S = 3  # Stretching factor
     zF(k) = tanh(S * (2 * (k - 1) / Nz - 1)) / tanh(S)
 
-    grid = VerticallyStretchedRectilinearGrid(FT, size=(1, 1, Nz), x=(0, 1), y=(0, 1), zF=zF)
+    grid = VerticallyStretchedRectilinearGrid(FT, size=(1, 1, Nz), x=(0, 1), y=(0, 1), z_faces=zF)
 
      zC(k) = (zF(k) + zF(k+1)) / 2
     ΔzF(k) = zF(k+1) - zF(k)
@@ -561,8 +548,18 @@ end
 
         # Testing show function
         topo = (Periodic, Periodic, Periodic)
+        
         grid = RegularRectilinearGrid(topology=topo, size=(3, 7, 9), x=(0, 1), y=(-π, π), z=(0, 2π))
-        show(grid); println();
+
+        @test try
+            CUDA.@disallowscalar show(grid); println()
+            true
+        catch err
+            println("error in show(::RegularRectilinearGrid)")
+            println(sprint(showerror, err))
+            false
+        end
+        
         @test grid isa RegularRectilinearGrid
     end
 
@@ -593,8 +590,17 @@ end
 
             # Testing show function
             Nz = 20
-            grid = VerticallyStretchedRectilinearGrid(size=(1, 1, Nz), x=(0, 1), y=(0, 1), zF=collect(0:Nz).^2)
-            show(grid); println();
+            grid = VerticallyStretchedRectilinearGrid(architecture=arch, size=(1, 1, Nz-1), x=(0, 1), y=(0, 1), z_faces=collect(0:Nz).^2)
+            
+            @test try
+                CUDA.@disallowscalar show(grid); println()
+                true
+            catch err
+                println("error in show(::VerticallyStretchedRectilinearGrid)")
+                println(sprint(showerror, err))
+                false
+            end
+            
             @test grid isa VerticallyStretchedRectilinearGrid
         end
     end
@@ -609,7 +615,16 @@ end
 
         # Testing show function
         grid = RegularLatitudeLongitudeGrid(size=(36, 32, 1), longitude=(-180, 180), latitude=(-80, 80), z=(0, 1))
-        show(grid); println();
+    
+        @test try
+            CUDA.@disallowscalar show(grid); println()
+            true
+        catch err
+            println("error in show(::RegularLatitudeLongitudeGrid)")
+            println(sprint(showerror, err))
+            false
+        end
+
         @test grid isa RegularLatitudeLongitudeGrid
     end
 
@@ -622,7 +637,16 @@ end
 
         # Testing show function
         grid = ConformalCubedSphereFaceGrid(size=(10, 10, 1), z=(0, 1))
-        show(grid); println();
+    
+        @test try
+            CUDA.@disallowscalar show(grid); println()
+            true
+        catch err
+            println("error in show(::ConformalCubedSphereFaceGrid)")
+            println(sprint(showerror, err))
+            false
+        end
+
         @test grid isa ConformalCubedSphereFaceGrid
     end
 

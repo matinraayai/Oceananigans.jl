@@ -1,11 +1,17 @@
 module Models
 
 export
-    IncompressibleModel, NonDimensionalIncompressibleModel, HydrostaticFreeSurfaceModel, ShallowWaterModel,
-    ExplicitFreeSurface, VectorInvariant, HydrostaticSphericalCoriolis, VectorInvariantEnstrophyConserving,
+    IncompressibleModel, NonDimensionalIncompressibleModel, ShallowWaterModel,
+    HydrostaticFreeSurfaceModel, VectorInvariant,
+    ExplicitFreeSurface, ImplicitFreeSurface,
+    HydrostaticSphericalCoriolis, VectorInvariantEnstrophyConserving,
     PrescribedVelocityFields
 
 using Oceananigans: AbstractModel
+
+import Oceananigans.Architectures: device_event
+
+device_event(model::AbstractModel) = device_event(model.architecture)
 
 abstract type AbstractIncompressibleModel{TS} <: AbstractModel{TS} end
 
@@ -14,11 +20,14 @@ include("HydrostaticFreeSurfaceModels/HydrostaticFreeSurfaceModels.jl")
 include("ShallowWaterModels/ShallowWaterModels.jl")
 
 using .IncompressibleModels: IncompressibleModel, NonDimensionalIncompressibleModel
-using .ShallowWaterModels: ShallowWaterModel
 
 using .HydrostaticFreeSurfaceModels:
-    HydrostaticFreeSurfaceModel, ExplicitFreeSurface, VectorInvariant,
-    HydrostaticSphericalCoriolis, VectorInvariantEnstrophyConserving,
+    HydrostaticFreeSurfaceModel, VectorInvariant,
+    ExplicitFreeSurface, ImplicitFreeSurface,
+    HydrostaticSphericalCoriolis,
+    VectorInvariantEnstrophyConserving, VectorInvariantEnergyConserving,
     PrescribedVelocityFields
+
+using .ShallowWaterModels: ShallowWaterModel
 
 end

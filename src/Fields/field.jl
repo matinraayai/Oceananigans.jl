@@ -1,13 +1,12 @@
 using Adapt
 
-struct Field{X, Y, Z, A, D, G, T, B} <: AbstractDataField{X, Y, Z, A, G, T}
+struct Field{X, Y, Z, A, D, G, T, B} <: AbstractDataField{X, Y, Z, A, G, T, 3}
                    data :: D
            architecture :: A
                    grid :: G
     boundary_conditions :: B
 
     function Field{X, Y, Z}(data::D, arch::A, grid::G, bcs::B) where {X, Y, Z, D, A, G, B}
-        validate_field_data(X, Y, Z, data, grid)
         T = eltype(grid)
         return new{X, Y, Z, A, D, G, T, B}(data, arch, grid, bcs)
     end
@@ -30,7 +29,7 @@ julia> using Oceananigans, Oceananigans.Grids
 
 julia> ω = Field(Face, Face, Center, CPU(), RegularRectilinearGrid(size=(1, 1, 1), extent=(1, 1, 1)))
 Field located at (Face, Face, Center)
-├── data: OffsetArrays.OffsetArray{Float64,3,Array{Float64,3}}, size: (3, 3, 3)
+├── data: OffsetArrays.OffsetArray{Float64, 3, Array{Float64, 3}}, size: (1, 1, 1)
 ├── grid: RegularRectilinearGrid{Float64, Periodic, Periodic, Bounded}(Nx=1, Ny=1, Nz=1)
 └── boundary conditions: x=(west=Periodic, east=Periodic), y=(south=Periodic, north=Periodic), z=(bottom=ZeroFlux, top=ZeroFlux)
 ```
@@ -40,6 +39,8 @@ function Field(X, Y, Z,
                grid::AbstractGrid,
                bcs = FieldBoundaryConditions(grid, (X, Y, Z)),
                data = new_data(eltype(grid), arch, grid, (X, Y, Z)))
+
+    validate_field_data(X, Y, Z, data, grid)
 
     return Field{X, Y, Z}(data, arch, grid, bcs)
 end
