@@ -8,6 +8,7 @@ struct GridFittedBoundary{S} <: AbstractImmersedBoundary
 end
 
 @inline (gfib::GridFittedBoundary)(x, y, z) = gfib.solid(x, y, z)
+@inline (gfib::GridFittedBoundary)(x, y, z, i, j, k) = gfib.solid(x, y, z, i, j, k)
 
 const IBG = ImmersedBoundaryGrid
 
@@ -18,7 +19,7 @@ const f = Face()
 ##### ImmersedBoundaryGrid
 #####
 
-@inline solid_cell(i, j, k, ibg) = ibg.immersed_boundary(node(c, c, c, i, j, k, ibg.grid)...)
+@inline solid_cell(i, j, k, ibg) = ibg.immersed_boundary(node(c, c, c, i, j, k, ibg.grid)..., i, j, k)
 
 @inline solid_node(LX, LY, LZ, i, j, k, ibg) = solid_cell(i, j, k, ibg) # fallback (for Center or Nothing LX, LY, LZ)
 

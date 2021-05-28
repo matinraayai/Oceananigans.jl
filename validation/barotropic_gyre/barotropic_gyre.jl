@@ -2,6 +2,8 @@
 
 using Oceananigans
 using Oceananigans.Grids
+using Oceananigans.BoundaryConditions
+using Oceananigans.ImmersedBoundaries: ImmersedBoundaryGrid, GridFittedBoundary
 
 using Oceananigans.Coriolis:
     HydrostaticSphericalCoriolis,
@@ -26,13 +28,18 @@ Nx = 60
 Ny = 60
 
 # A spherical domain
-grid = RegularLatitudeLongitudeGrid(size = (Nx, Ny, 1),
-                                    longitude = (-30, 30),
-                                    latitude = (15, 75),
-                                    z = (-4000, 0))
+underlying_grid = RegularLatitudeLongitudeGrid(size = (Nx, Ny, 1),
+                                               longitude = (-30, 30),
+                                               latitude = (15, 75),
+                                               z = (-4000, 0))
 
-#free_surface = ImplicitFreeSurface(gravitational_acceleration=0.1)
-free_surface = ExplicitFreeSurface(gravitational_acceleration=0.1)
+solid(x, y, z, i, j, k) = false
+grid = ImmersedBoundaryGrid(underlying_grid, GridFittedBoundary(solid))
+
+
+
+free_surface = ImplicitFreeSurface(gravitational_acceleration=0.1)
+# free_surface = ExplicitFreeSurface(gravitational_acceleration=0.1)
 
 coriolis = HydrostaticSphericalCoriolis(scheme = VectorInvariantEnstrophyConserving())
 

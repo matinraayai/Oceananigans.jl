@@ -5,14 +5,14 @@ using Oceananigans.ImmersedBoundaries: ImmersedBoundaryGrid, GridFittedBoundary
 grid = RegularRectilinearGrid(size=(512, 256), x=(-10, 10), z=(0, 5), topology=(Periodic, Flat, Bounded))
 
 # Gaussian bump of width "1"
-bump(x, y, z) = z < exp(-x^2)
+bump(x, y, z, i, j, k) = z < exp(-x^2)
 
 grid_with_bump = ImmersedBoundaryGrid(grid, GridFittedBoundary(bump))
 
 # Tidal forcing
 tidal_forcing(x, y, z, t) = 1e-4 * cos(t)
 
-model = HydrostaticFreeSurfaceModel(architecture = GPU(),
+model = HydrostaticFreeSurfaceModel(architecture = CPU(),
                                     grid = grid_with_bump,
                                     momentum_advection = CenteredSecondOrder(),
                                     free_surface = ExplicitFreeSurface(gravitational_acceleration=10),

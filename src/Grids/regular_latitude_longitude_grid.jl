@@ -21,6 +21,12 @@ struct RegularLatitudeLongitudeGrid{FT, TX, TY, TZ, A} <: AbstractHorizontallyCu
       φᵃᶜᵃ :: A
       zᵃᵃᶠ :: A
       zᵃᵃᶜ :: A
+      xF   :: A
+      xC   :: A
+      yF   :: A
+      yC   :: A
+      zF   :: A
+      zC   :: A
     radius :: FT
 end
 
@@ -83,7 +89,15 @@ function RegularLatitudeLongitudeGrid(FT=Float64; size, latitude, longitude, z, 
     φᵃᶜᵃ = OffsetArray(φᵃᶜᵃ, -Hφ)
     zᵃᵃᶜ = OffsetArray(zᵃᵃᶜ, -Hz)
 
-    return RegularLatitudeLongitudeGrid{FT, TX, TY, TZ, typeof(λᶠᵃᵃ)}(Nλ, Nφ, Nz, Hλ, Hφ, Hz, Lλ, Lφ, Lz, Δλ, Δφ, Δz, λᶠᵃᵃ, λᶜᵃᵃ, φᵃᶠᵃ, φᵃᶜᵃ, zᵃᵃᶠ, zᵃᵃᶜ, radius)
+    #  AGHHHH - should we just use the canonical names in the first place?
+    xF = λᶠᵃᵃ
+    xC = λᶜᵃᵃ
+    yF = φᵃᶠᵃ
+    yC = φᵃᶜᵃ
+    zF = zᵃᵃᶠ
+    zC = zᵃᵃᶜ
+
+    return RegularLatitudeLongitudeGrid{FT, TX, TY, TZ, typeof(λᶠᵃᵃ)}(Nλ, Nφ, Nz, Hλ, Hφ, Hz, Lλ, Lφ, Lz, Δλ, Δφ, Δz, λᶠᵃᵃ, λᶜᵃᵃ, φᵃᶠᵃ, φᵃᶜᵃ, zᵃᵃᶠ, zᵃᵃᶜ, xF, xC, yF, yC, zF, zC, radius)
 end
 
 function domain_string(grid::RegularLatitudeLongitudeGrid)

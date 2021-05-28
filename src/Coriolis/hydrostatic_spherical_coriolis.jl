@@ -1,5 +1,6 @@
 using Oceananigans.Grids: AbstractHorizontallyCurvilinearGrid, RegularLatitudeLongitudeGrid, ConformalCubedSphereFaceGrid
 using Oceananigans.Operators: Δx_vᶜᶠᵃ, Δy_uᶠᶜᵃ, Δxᶠᶜᵃ, Δyᶜᶠᵃ, hack_sind
+using Oceananigans.ImmersedBoundaries: ImmersedBoundaryGrid
 
 # Our two Coriolis schemes are energy-conserving or enstrophy-conserving
 # with a "vector invariant" momentum advection scheme, but not with a "flux form"
@@ -27,6 +28,7 @@ By default, `rotation_rate` is assumed to be Earth's.
 HydrostaticSphericalCoriolis(FT::DataType=Float64; rotation_rate=Ω_Earth, scheme::S=VectorInvariantEnergyConserving()) where S =
     HydrostaticSphericalCoriolis{S, FT}(rotation_rate, scheme)
 
+@inline φᶠᶠᵃ(i, j, k, grid::ImmersedBoundaryGrid) = φᶠᶠᵃ(i, j, k, grid.grid)
 @inline φᶠᶠᵃ(i, j, k, grid::RegularLatitudeLongitudeGrid) = @inbounds grid.φᵃᶠᵃ[j]
 @inline φᶠᶠᵃ(i, j, k, grid::ConformalCubedSphereFaceGrid) = @inbounds grid.φᶠᶠᵃ[i, j]
 
@@ -41,8 +43,14 @@ HydrostaticSphericalCoriolis(FT::DataType=Float64; rotation_rate=Ω_Earth, schem
 
 const VIEnstrophy = HydrostaticSphericalCoriolis{<:VectorInvariantEnstrophyConserving}
 
+@inline x_f_cross_U(i, j, k, grid::ImmersedBoundaryGrid, coriolis::VIEnstrophy, U) =
+        x_f_cross_U(i, j, k, grid.grid                 , coriolis::VIEnstrophy, U)
+
 @inline x_f_cross_U(i, j, k, grid::AbstractHorizontallyCurvilinearGrid, coriolis::VIEnstrophy, U) =
     @inbounds - ℑyᵃᶜᵃ(i, j, k, grid, fᶠᶠᵃ, coriolis) * ℑxᶠᵃᵃ(i, j, k, grid, ℑyᵃᶜᵃ, Δx_vᶜᶠᵃ, U[2]) / Δxᶠᶜᵃ(i, j, k, grid)
+
+@inline y_f_cross_U(i, j, k, grid::ImmersedBoundaryGrid, coriolis::VIEnstrophy, U) =
+        y_f_cross_U(i, j, k, grid.grid                 , coriolis::VIEnstrophy, U)
 
 @inline y_f_cross_U(i, j, k, grid::AbstractHorizontallyCurvilinearGrid, coriolis::VIEnstrophy, U) =
     @inbounds + ℑxᶜᵃᵃ(i, j, k, grid, fᶠᶠᵃ, coriolis) * ℑyᵃᶠᵃ(i, j, k, grid, ℑxᶜᵃᵃ, Δy_uᶠᶜᵃ, U[1]) / Δyᶜᶠᵃ(i, j, k, grid)

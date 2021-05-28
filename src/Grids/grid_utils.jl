@@ -141,14 +141,30 @@ Returns 1, which is the 'length' of a field along a reduced dimension.
 #####
 
 # Node by node
+### @inline xnode(::Center, i, grid::ImmersedBoundaryGrid) = xnode(Center(), i, grid.grid)
+### @inline xnode(::Face,   i, grid::ImmersedBoundaryGrid) = xnode(Face(),   i, grid.grid)
+### @inline ynode(::Center, i, grid::ImmersedBoundaryGrid) = ynode(Center(), i, grid.grid)
+### @inline ynode(::Face,   i, grid::ImmersedBoundaryGrid) = ynode(Face(),   i, grid.grid)
+### @inline znode(::Center, i, grid::ImmersedBoundaryGrid) = znode(Center(), i, grid.grid)
+### @inline znode(::Face,   i, grid::ImmersedBoundaryGrid) = znode(Face(),   i, grid.grid)
+
+
 @inline xnode(::Center, i, grid) = @inbounds grid.xC[i]
 @inline xnode(::Face,   i, grid) = @inbounds grid.xF[i]
+###### AGHHHHHH CHRIS - a curvilinear grid does not have to use spherical polar coords!
+######                  this all seems a bit sketchy to me. Same for y and z below
+### @inline xnode(::Center, i, grid::AbstractHorizontallyCurvilinearGrid) = @inbounds grid.λᶜᵃᵃ[i]
+### @inline xnode(::Face,   i, grid::AbstractHorizontallyCurvilinearGrid) = @inbounds grid.λᶠᵃᵃ[i]
 
 @inline ynode(::Center, j, grid) = @inbounds grid.yC[j]
 @inline ynode(::Face,   j, grid) = @inbounds grid.yF[j]
+### @inline ynode(::Center, j, grid::AbstractHorizontallyCurvilinearGrid) = @inbounds grid.φᵃᶜᵃ[j]
+### @inline ynode(::Face,   j, grid::AbstractHorizontallyCurvilinearGrid) = @inbounds grid.φᵃᶠᵃ[j]
 
 @inline znode(::Center, k, grid) = @inbounds grid.zC[k]
 @inline znode(::Face,   k, grid) = @inbounds grid.zF[k]
+### @inline znode(::Center, k, grid::AbstractHorizontallyCurvilinearGrid) = @inbounds grid.zᵃᵃᶜ[k]
+### @inline znode(::Face,   k, grid::AbstractHorizontallyCurvilinearGrid) = @inbounds grid.zᵃᵃᶠ[k]
 
 # Fallback
 @inline xnode(LX, LY, LZ, i, j, k, grid) = xnode(LX, i, grid)

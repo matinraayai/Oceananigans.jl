@@ -173,13 +173,13 @@ include("AbstractOperations/AbstractOperations.jl")
 include("Solvers/Solvers.jl")
 
 # Physics, time-stepping, and models
-include("Coriolis/Coriolis.jl")
 include("BuoyancyModels/BuoyancyModels.jl")
 include("StokesDrift.jl")
 include("TurbulenceClosures/TurbulenceClosures.jl")
+include("ImmersedBoundaries/ImmersedBoundaries.jl")
+include("Coriolis/Coriolis.jl")
 include("LagrangianParticleTracking/LagrangianParticleTracking.jl")
 include("Forcings/Forcings.jl")
-include("ImmersedBoundaries/ImmersedBoundaries.jl")
 include("TimeSteppers/TimeSteppers.jl")
 include("Models/Models.jl")
 
