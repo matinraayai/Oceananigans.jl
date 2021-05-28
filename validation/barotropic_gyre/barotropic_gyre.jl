@@ -33,7 +33,16 @@ underlying_grid = RegularLatitudeLongitudeGrid(size = (Nx, Ny, 1),
                                                latitude = (15, 75),
                                                z = (-4000, 0))
 
-solid(x, y, z, i, j, k) = false
+solid(x, y, z, i, j, k) = (
+                           if i > 30 && i < 35;
+                                   if j > 42 && j < 48;
+                                           return true;
+                                   end;
+                           end;
+                           return false;
+                          )
+
+
 grid = ImmersedBoundaryGrid(underlying_grid, GridFittedBoundary(solid))
 
 
@@ -122,6 +131,7 @@ end
 simulation = Simulation(model,
                         Δt = 3600,
                         stop_time = 1years,
+                        # stop_time = 3600*720,
                         iteration_interval = 100,
                         progress = Progress(time_ns()))
 
