@@ -14,10 +14,10 @@ using Oceananigans.OutputWriters
 using Oceananigans.BoundaryConditions
 
 # setting boundary condition topology
-topology=(Periodic, Bounded, Bounded)
+topology=(Periodic, Periodic, Bounded)
 
 # setting up 2D grid
-grid = RegularRectilinearGrid(topology=topology, size=(350, 350, 1), x=(20, 40), y=(10, 30), z=(0, 1), halo=(3, 3, 3))
+grid = RegularRectilinearGrid(topology=topology, size=(500, 750, 1), x=(20, 40), y=(10, 40), z=(0, 1), halo=(3, 3, 3))
 
 
 # reynolds number
@@ -29,10 +29,25 @@ vCent = [30.0, 20.0, 0.];
 dist_cylinder(v) = sqrt((vCent[1]-v[1])^2+(vCent[2]-v[2])^2)-R # immersed solid
 inside_cylinder(x, y, z) = ((x-vCent[1])^2 + (y-vCent[2])^2) <= R # immersed solid
 
+# masking function
+
+@inline heaviside(X) = ifelse(X < 0, zero(X), one(X))
+@inline mask2nd(X) = heaviside(X) * X^2
+function top_mask(x, y, z)
+    y₁ = 40; y₀ = 30
+    return mask2nd((y - y₀)/(y₁ - y₀))
+end
+
+full_sponge_1 = Relaxation(rate= 0.7, mask=top_mask, target=1)
+full_sponge_0 = Relaxation(rate= 0.7, mask=top_mask, target=0)
+
+
 # boundary conditions: inflow and outflow in y
 v_bcs = VVelocityBoundaryConditions(grid,
                                     north = BoundaryCondition(NormalFlow,1.0),
                                     south = BoundaryCondition(NormalFlow,1.0))
+
+T_bcs = TracerBoundaryConditions(grid, east = FluxBoundaryCondition(nothing), west = FluxBoundaryCondition(nothing))
 
 # setting up incompressible model with immersed boundary
 model = IncompressibleModel(timestepper = :RungeKutta3, 
@@ -40,15 +55,16 @@ model = IncompressibleModel(timestepper = :RungeKutta3,
                                    grid = grid,
                                buoyancy = nothing,
                                 tracers = :T,
-                                closure = IsotropicDiffusivity(ν=2/Re),
-                    boundary_conditions = (v=v_bcs,),
+                                closure = IsotropicDiffusivity(ν=2/Re, κ=2/Re),
+                    boundary_conditions = (v=v_bcs, T = T_bcs),
+                                forcing = (u = full_sponge_0, v = full_sponge_1,),
                       immersed_boundary = dist_cylinder
                            )
 
 # initial condition
 # setting velocitiy to zero inside the cylinder and 1 everywhere else
 v₀(x, y, z) = ifelse(inside_cylinder(x,y,z), 0., 1.)
-T₀(x, y, z) = ifelse(inside_cylinder(x,y,z), 0., 5.)
+T₀(x, y, z) = ifelse(inside_cylinder(x,y,z), 0., 1.)
 set!(model, v=v₀, T=T₀)
 
 
@@ -58,14 +74,14 @@ sim.model.clock.time,
 maximum(sim.model.velocities.v.data),
 minimum(sim.model.velocities.v.data))
 
-simulation = Simulation(model, Δt=5.7e-3, stop_time=5, iteration_interval=20, progress=progress)
+simulation = Simulation(model, Δt=5.7e-3, stop_time=20, iteration_interval=100, progress=progress)
 
 # ## Output
 
 simulation.output_writers[:fields] = JLD2OutputWriter(model,
                                                       merge(model.velocities, model.tracers),
                                                       schedule = TimeInterval(0.5),
-                                                      prefix = "flow_around_cylinder_tempIBM",
+                                                      prefix = "flow_around_cylinder_tempIBM_newBCs_51",
                                                       force = true)
 
 # run it
@@ -116,7 +132,7 @@ anim = @animate for (i, iteration) in enumerate(iterations)
     legend=false,fillalpha=0, aspect_ratio=1)
 end
 
-gif(anim, "flow_around_cyl_velocity_tempIBM.gif", fps = 8) # hide
+gif(anim, "flow_around_cyl_velocity_tempIBM_newBCs_51.gif", fps = 8) # hide
 
 @info "Making a neat movie of temperature..."
 
@@ -133,20 +149,20 @@ anim = @animate for (i, iteration) in enumerate(iterations)
 
     v_levels = vcat([-v_max], range(-v_lim, stop=v_lim, length=50), [v_max])
 
-    v_plot = contourf(grid.xC[1:350], grid.yC[1:350], v_slice';
+    v_plot = contourf(grid.xC[1:500], grid.yC[1:750], v_slice';
                       linewidth = 0,
-                          color = :balance,
+                          color = :heat,
                     aspectratio = 1,
                           title = @sprintf("T(x, y, t = %.1f) around a cylinder", t),
                          xlabel = "x",
                          ylabel = "y",
                          levels = v_levels,
-                          xlims = (grid.xF[1], grid.xF[grid.Nx]),
-                          ylims = (grid.yF[1], grid.yF[grid.Ny]),
+                          xlims = (grid.xC[1], grid.xC[grid.Nx]),
+                          ylims = (grid.yC[1], grid.yC[grid.Ny]),
                           clims = (-v_lim, v_lim))
     plot!(circle_shape(30,20,1),seriestype=[:shape,],linecolor=:black,
     legend=false,fillalpha=0, aspect_ratio=1)
 end
 
-gif(anim, "flow_around_cyl_tempIBM.gif", fps = 8) # hide
+gif(anim, "flow_around_cyl_tempIBM_newBCs_51.gif", fps = 8) # hide
 

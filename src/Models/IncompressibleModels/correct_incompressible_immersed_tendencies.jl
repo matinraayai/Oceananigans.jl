@@ -1,6 +1,7 @@
 using Oceananigans.Grids: xnode, ynode, znode, Face, Center, AbstractGrid
 using ForwardDiff
 using LinearAlgebra
+using StaticArrays
 using Oceananigans.Fields: interpolate, location
 
 import Oceananigans.TimeSteppers: correct_immersed_tendencies!
@@ -69,23 +70,23 @@ end
 end
 
 # function to finds the most positive distance of neighboring nodes
-max_neighbor(x, y, z, Δx, Δy, Δz, immersed_distance)= max(immersed_distance([x+Δx y z]),
-                    immersed_distance([x-Δx y z]), immersed_distance([x y+Δy z]),
-                    immersed_distance([x y-Δy z]), immersed_distance([x y z+Δz]),
-                    immersed_distance([x y z-Δz]))  
+max_neighbor(x, y, z, Δx, Δy, Δz, immersed_distance)= max(immersed_distance(SA[x+Δx, y, z]),
+                    immersed_distance(SA[x-Δx, y, z]), immersed_distance(SA[x, y+Δy, z]),
+                    immersed_distance(SA[x, y-Δy, z]), immersed_distance(SA[x, y, z+Δz]),
+                    immersed_distance(SA[x, y, z-Δz]))  
 
 # function to find the tangential plane to the point for rotation to tangential and normal
 function projection_matrix(N)
     if abs(N[1]) ==1 # if normal vector is entirely in the x direction
-        v1 = [0; -sign(N[1]); 0]  # we want v1 = [0,-1,0]
+        v1 = SA[0; -sign(N[1]); 0]  # we want v1 = [0,-1,0]
         v1 = v1./norm(v1); # normalizing vector
-        v2 = [0; 0; -1];
+        v2 = SA[0; 0; -1];
     elseif abs(N[2]) == 1 || N[3]==0 # if normal vector is entirely in the y direction or 0 z comp
-        v1 = [sign(N[2]); -N[1]*sign(N[2])/N[2]; 0] # we want v1 = [1,0,0]
+        v1 = SA[sign(N[2]); -N[1]*sign(N[2])/N[2]; 0] # we want v1 = [1,0,0]
         v1 = v1./norm(v1); # normalizing vector
         v2 = cross(N,v1); # cross product to be orthonormal to both vectors
     else
-        v1 = [sign(N[3]); 0; -N[1]*sign(N[3])/N[3]]; # else we want v1 = [1, 0 , ?]
+        v1 = SA[sign(N[3]); 0; -N[1]*sign(N[3])/N[3]]; # else we want v1 = [1, 0 , ?]
         v1 = v1./norm(v1); # normalizing vector
         v2 = cross(N,v1); # cross product to be orthonormal to both vectors
     end
@@ -129,7 +130,7 @@ function immersed_value_vel(xvec, im_dist, velocities, b_conds, needed_idx)
     # matrix to rotate into tangential and normal
     matrix = projection_matrix(n);
     # new velocity vector: V_rot = [Vt1, Vt2, Vn]
-    V_rot = matrix*[uI; vI; wI];
+    V_rot = matrix*SA[uI; vI; wI];
     
     # velocities at forced point from interpolation and BCs
     # need some kind of thing to separate out boundary conditions into what we have
@@ -144,7 +145,7 @@ function immersed_value_vel(xvec, im_dist, velocities, b_conds, needed_idx)
     end
     
     # now we need to return to cartesian coordinate system
-    VF = inv(matrix)*[VF¹;VF²;VFⁿ];
+    VF = inv(matrix)*SA[VF¹;VF²;VFⁿ];
     
     # now we need to choose the one velocity out of these that we are enforcing at this location
     vel = VF[needed_idx]
@@ -153,7 +154,7 @@ end
 # function to update a particular velocity
 function immersed_update_vel(i, j, k, x, y, z, im_dist, grid, velocities, b_conds, needed_idx, max_neighbor)
     # a function that takes in a location, checks if immersed node, and forces velocities accordingly
-    spc = [x, y, z]
+    spc = SA[x, y, z]
     if im_dist(spc) <= 0 # solid node or boundary node
         if max_neighbor(x, y, z, grid.Δx, grid.Δy, grid.Δz, im_dist) > 0 # fluid neighbor
             velI = immersed_value_vel(spc, im_dist, velocities, b_conds, needed_idx)
@@ -180,7 +181,7 @@ end
 # function to update a particular velocity
 function immersed_update_trac(i, j, k, x, y, z, im_dist, grid, tracers, b_conds, max_neighbor)
     # a function that takes in a location, checks if immersed node, and forces velocities accordingly
-    spc = [x, y, z]
+    spc = SA[x, y, z]
     if im_dist(spc) <= 0 # solid node
         if max_neighbor(x, y, z, grid.Δx, grid.Δy, grid.Δz, im_dist) > 0 # fluid neighbor
             
