@@ -28,7 +28,7 @@ Nx = 60
 Ny = 60
 
 # A spherical domain
-underlying_grid = RegularLatitudeLongitudeGrid(size = (Nx, Ny, 1),
+underlying_grid = RegularLatitudeLongitudeGrid(size = (Nx, Ny, 30),
                                                longitude = (-30, 30),
                                                latitude = (15, 75),
                                                z = (-4000, 0))

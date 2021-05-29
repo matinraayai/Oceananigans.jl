@@ -192,6 +192,7 @@ include("Simulations/Simulations.jl")
 # Abstractions for distributed and multi-region models
 include("CubedSpheres/CubedSpheres.jl")
 include("Distributed/Distributed.jl")
+include("ImmersedBoundaries/immersed_grid_conformal_cubed_sphere.jl")
 
 #####
 ##### Needed so we can export names from sub-modules at the top-level
