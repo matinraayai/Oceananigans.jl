@@ -55,7 +55,7 @@ end
 
 const APG = AbstractPrimaryGrid
 
-calculate_diffusivities!(K, arch, grid, closure::HorizontallyCurvilinearAnisotropicDiffusivity, args...) = nothing
+calculate_diffusivities!(K, closure::HorizontallyCurvilinearAnisotropicDiffusivity, args...) = nothing
 
 viscous_flux_ux(i, j, k, grid::APG, closure::HCAD, clock, U, args...) = - ν_δᶜᶜᶜ(i, j, k, grid, clock, closure.νh, U.u, U.v)   
 viscous_flux_uy(i, j, k, grid::APG, closure::HCAD, clock, U, args...) = + ν_ζᶠᶠᶜ(i, j, k, grid, clock, closure.νh, U.u, U.v)   

@@ -20,12 +20,12 @@ function update_state!(model::HydrostaticFreeSurfaceModel)
     wait(device(model.architecture), MultiEvent(masking_events))
 
     # Fill halos for velocities and tracers
-    fill_halo_regions!(prognostic_fields(model), model.architecture, model.clock, fields(model))
+    fill_halo_regions!(prognostic_fields(model), model.architecture, model.clock, fields(model), model.closure)
     fill_horizontal_velocity_halos!(model.velocities.u, model.velocities.v, model.architecture)
 
     compute_w_from_continuity!(model)
 
-    fill_halo_regions!(model.velocities.w, model.architecture, model.clock, fields(model))
+    fill_halo_regions!(model.velocities.w, model.architecture, model.clock, fields(model), model.closure)
 
     # Compute auxiliary fields
     for aux_field in model.auxiliary_fields
@@ -33,10 +33,9 @@ function update_state!(model::HydrostaticFreeSurfaceModel)
     end
 
     # Calculate diffusivities
-    calculate_diffusivities!(model.diffusivities, model.architecture, model.grid, model.closure,
-                             model.buoyancy, model.velocities, model.tracers)
+    calculate_diffusivities!(model.diffusivities, model.closure, model)
 
-    fill_halo_regions!(model.diffusivities, model.architecture, model.clock, fields(model))
+    fill_halo_regions!(model.diffusivities, model.architecture, model.clock, fields(model), model.closure)
 
     # Calculate hydrostatic pressure
     pressure_calculation = launch!(model.architecture, model.grid, Val(:xy), update_hydrostatic_pressure!,

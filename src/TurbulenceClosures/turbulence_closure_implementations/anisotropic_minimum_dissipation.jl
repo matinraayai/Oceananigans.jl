@@ -181,7 +181,14 @@ end
     return max(zero(FT), κˢᵍˢ) + κ
 end
 
-function calculate_diffusivities!(K, arch, grid, closure::AnisotropicMinimumDissipation, buoyancy, U, C)
+function calculate_diffusivities!(K, closure::AnisotropicMinimumDissipation, model)
+
+    arch = model.architecture
+    grid = model.grid
+    buoyancy = model.buoyancy
+    velocities = model.velocities
+    tracers = model.tracers
+
     workgroup, worksize = work_layout(grid, :xyz)
 
     barrier = Event(device(arch))
@@ -189,13 +196,13 @@ function calculate_diffusivities!(K, arch, grid, closure::AnisotropicMinimumDiss
     viscosity_kernel! = calculate_viscosity!(device(arch), workgroup, worksize)
     diffusivity_kernel! = calculate_tracer_diffusivity!(device(arch), workgroup, worksize)
 
-    viscosity_event = viscosity_kernel!(K.νₑ, grid, closure, buoyancy, U, C, dependencies=barrier)
+    viscosity_event = viscosity_kernel!(K.νₑ, grid, closure, buoyancy, velocities, tracers, dependencies=barrier)
 
     events = [viscosity_event]
 
     for (tracer_index, κₑ) in enumerate(K.κₑ)
         @inbounds c = C[tracer_index]
-        event = diffusivity_kernel!(κₑ, grid, closure, c, Val(tracer_index), U, dependencies=barrier)
+        event = diffusivity_kernel!(κₑ, grid, closure, c, Val(tracer_index), velocities, dependencies=barrier)
         push!(events, event)
     end
 

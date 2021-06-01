@@ -16,8 +16,7 @@ function update_state!(model::IncompressibleModel)
                        model.clock, fields(model))
 
     # Calculate diffusivities
-    calculate_diffusivities!(model.diffusivities, model.architecture, model.grid, model.closure,
-                             model.buoyancy, model.velocities, model.tracers)
+    calculate_diffusivities!(model.diffusivities, model.closure, model)
 
     fill_halo_regions!(model.diffusivities, model.architecture, model.clock, fields(model))
 

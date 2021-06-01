@@ -197,8 +197,16 @@ const L2D = TwoDimensionalLeith
 @inline viscous_flux_wy(i, j, k, grid, closure::L2D, clock, U, K) = - 2 * ν_σᶜᶠᶠ(i, j, k, grid, closure, K.νₑ, Σ₃₂, U.u, U.v, U.w)
 @inline viscous_flux_wz(i, j, k, grid, closure::L2D, clock, U, K) = - 2 * ν_σᶜᶜᶜ(i, j, k, grid, closure, K.νₑ, Σ₃₃, U.u, U.v, U.w)
 
-function calculate_diffusivities!(K, arch, grid, closure::TwoDimensionalLeith, buoyancy, U, C)
-    event = launch!(arch, grid, :xyz, calculate_nonlinear_viscosity!, K.νₑ, grid, closure, buoyancy, U, C,
+function calculate_diffusivities!(K, closure::TwoDimensionalLeith, model)
+
+    arch = model.architecture
+    grid = model.grid
+    buoyancy = model.buoyancy
+    velocities = model.velocities
+    tracers = model.tracers
+
+    event = launch!(arch, grid, :xyz,
+                    calculate_nonlinear_viscosity!, K.νₑ, grid, closure, buoyancy, velocities, tracers,
                     dependencies=Event(device(arch)))
 
     wait(device(arch), event)
