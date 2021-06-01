@@ -168,7 +168,7 @@ function cubed_sphere_rossby_haurwitz(grid_filepath; check_fields=false)
     @info "Stop time = $(prettytime(stop_time))"
 
     Δt = 20seconds
-    # stop_time = 20*Δt
+    stop_time = 23980*Δt
 
     gravity_wave_speed = sqrt(g * H)
     min_spacing = filter(!iszero, grid.faces[1].Δyᶠᶠᵃ) |> minimum

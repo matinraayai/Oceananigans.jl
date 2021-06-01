@@ -50,9 +50,13 @@ end
 const ImmersedCubeSphereFaceGrid     = ImmersedBoundaryGrid{X, Y, Z, A, <:ConformalCubedSphereFaceGrid} where{X, Y, Z, A}
 const ImmersedCubeSphereFaceField    = AbstractField{X, Y, Z, A, <:ImmersedCubeSphereFaceGrid } where {X, Y, Z, A}
 const NonImmersedCubeSphereFaceField = AbstractField{X, Y, Z, A, <:ConformalCubedSphereFaceGrid} where {X, Y, Z, A}
+#
+# This line causes errors in type parsing during initial load. Not sure why! Ignoring this for now!
 # const CubedSphereFaceField = Union{ NonImmersedCubeSphereFaceField, ImmersedCubeSphereFaceField }
-const CubedSphereFaceField = Union{ImmersedCubeSphereFaceField}
-# const CubedSphereFaceField = Union{NonImmersedCubeSphereFaceField}
+#
+#CNH with Immersed    : const CubedSphereFaceField = Union{ImmersedCubeSphereFaceField}
+#CNH without Immersed : const CubedSphereFaceField = Union{NonImmersedCubeSphereFaceField}
+const CubedSphereFaceField = Union{NonImmersedCubeSphereFaceField}
 
 # There must be a way to dispatch in one function without ambiguity with `new_data.jl`...
 

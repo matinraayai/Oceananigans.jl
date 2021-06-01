@@ -44,7 +44,9 @@ function ImmersedBoundaryConformalCubedSphereGrid(filepath::AbstractString, FT=F
     face_kwargs = (Nz=Nz, z=z, topology=face_topo, radius=radius, halo=halo, architecture=architecture)
 
     underlying_faces = Tuple(ConformalCubedSphereFaceGrid(filepath, FT; face=n, face_kwargs...) for n in 1:6)
-    faces = Tuple( ImmersedBoundaryGrid(underlying_faces[n], GridFittedBoundary(ibg_solid_func))  for n in 1:6) 
+    # CNH with Immersed    : faces = Tuple( ImmersedBoundaryGrid(underlying_faces[n], GridFittedBoundary(ibg_solid_func))  for n in 1:6) 
+    # CNH without Immersed : faces = underlying_faces
+    faces = underlying_faces
 
     face_connectivity = default_face_connectivity()
 
