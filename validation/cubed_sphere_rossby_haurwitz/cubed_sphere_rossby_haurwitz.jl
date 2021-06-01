@@ -95,9 +95,11 @@ function cubed_sphere_rossby_haurwitz(grid_filepath; check_fields=false)
     ## Grid setup
 
     H = 8kilometers
-    underlying_grid = ConformalCubedSphereGrid(grid_filepath, Nz=1, z=(-H, 0))
+    ## underlying_grid = ConformalCubedSphereGrid(grid_filepath, Nz=1, z=(-H, 0))
     solid(x, y, z, i, j, k) = false
-    grid = ImmersedBoundaryGrid(underlying_grid, GridFittedBoundary(solid))
+    ## grid = ImmersedBoundaryGrid(underlying_grid, GridFittedBoundary(solid))
+
+    grid = ImmersedBoundaryConformalCubedSphereGrid(grid_filepath, Nz=1, z=(-H, 0), ibg_solid_func=solid)
 
     ### return grid
     ### grid = underlying_grid 
