@@ -247,12 +247,11 @@ end
                         buoyancy, fields, top_tracer_bcs, top_velocity_bcs, clock)
 end
 
-struct ConvectiveAdjustment
-    Cᴬu :: FT
-    Cᴬc :: FT
-    Cᴬe :: FT
+Base.@kwdef struct ConvectiveAdjustment{FT}
+    Cᴬu :: FT = 1.0
+    Cᴬc :: FT = 10.0
+    Cᴬe :: FT = 2.0
 end
-
 
 #####
 ##### Utilities for model constructors
@@ -414,6 +413,10 @@ end
 ##### Diffusivities
 #####
 
+#####
+##### "Stable" scales
+#####
+
 @inline ϕ²(i, j, k, grid, ϕ, args...) = ϕ(i, j, k, grid, args...)^2
 
 @inline function Riᶜᶜᶜ(i, j, k, grid, velocities, tracers, buoyancy)
@@ -428,7 +431,7 @@ end
 
 @inline scale(Ri, σ⁻, σ⁺, c, w) = σ⁻ + (σ⁺ - σ⁻) * step(Ri, c, w)
 
-@inline function momentum_diffusivity_scale(i, j, k, grid, closure, velocities, tracers, buoyancy)
+@inline function momentum_diffusivity_scale(i, j, k, grid, ::Nothing, closure, velocities, tracers, buoyancy)
     Ri = Riᶜᶜᶜ(i, j, k, grid, velocities, tracers, buoyancy)
     return scale(Ri,
                  closure.diffusivity_scaling.Cᴷu⁻,
@@ -437,7 +440,7 @@ end
                  closure.diffusivity_scaling.CᴷRiʷ)
 end
 
-@inline function tracer_diffusivity_scale(i, j, k, grid, closure, velocities, tracers, buoyancy)
+@inline function tracer_diffusivity_scale(i, j, k, grid, ::Nothing, closure, velocities, tracers, buoyancy)
     Ri = Riᶜᶜᶜ(i, j, k, grid, velocities, tracers, buoyancy)
     return scale(Ri,
                  closure.diffusivity_scaling.Cᴷc⁻,
@@ -446,7 +449,7 @@ end
                  closure.diffusivity_scaling.CᴷRiʷ)
 end
 
-@inline function TKE_diffusivity_scale(i, j, k, grid, closure, velocities, tracers, buoyancy)
+@inline function TKE_diffusivity_scale(i, j, k, grid, ::Nothing, closure, velocities, tracers, buoyancy)
     Ri = Riᶜᶜᶜ(i, j, k, grid, velocities, tracers, buoyancy)
     return scale(Ri,
                  closure.diffusivity_scaling.Cᴷe⁻,
@@ -455,41 +458,52 @@ end
                  closure.diffusivity_scaling.CᴷRiʷ)
 end
 
+#####
+##### "Unstable" scales
+#####
+
+@inline function momentum_diffusivity_scale(i, j, k, grid, convective_adjustment, closure, velocities, tracers, buoyancy)
+
 @inline turbulent_velocity(i, j, k, grid, e) = @inbounds sqrt(max(zero(eltype(grid)), e[i, j, k]))
 
-@inline function stable_diffusivityᶜᶜᶜ(i, j, k, grid, closure, e, tracers, buoyancy)
+@inline function unscaled_diffusivityᶜᶜᶜ(i, j, k, grid, ::Nothing, closure, e, velocites, tracers, tracer_bcs, clock)
     ℓ = dissipation_mixing_lengthᶜᶜᶜ(i, j, k, grid, closure, e, tracers, buoyancy)
     u★ = turbulent_velocity(i, j, k, grid, e)
     return ℓ * u★
 end
 
-@inline function unstable_diffusivityᶜᶜᶜ(i, j, k, grid, closure, e, tracers, buoyancy)
-    e² = turbulent_velocity(i, j, k, grid, e)^4
-    return ℓ * u★
+@inline function unscaled_diffusivityᶜᶜᶜ(i, j, k, grid, convective_adjustment, closure, e, velocities, tracers, buoyancy, clock, tracer_bcs)
+    K_stable = unscaled_diffusivityᶜᶜᶜ(i, j, k, grid, nothing, closure, e, tracers, buoyancy, clock, tracer_bcs)
+    K_convective = convective_diffusivityᶜᶜᶜ(i, j, k, grid, convective_adjustment, closure, e, tracers, buoyancy, clock, tracer_bcs)
+
+    Qᵇ = top_buoyancy_flux(i, j, grid, buoyancy, tracer_bcs, clock, merge(velocities, tracers))
+    N² = ℑzᵃᵃᶜ(i, j, k, grid, ∂z_b, buoyancy, tracers)
+    convecting = N² < 0 
+
+    return
 end
 
-
-
-@inline function stable_diffusivityᶜᶜᶜ(i, j, k, grid, closure, e, tracers, buoyancy)
-    ℓ = dissipation_mixing_lengthᶜᶜᶜ(i, j, k, grid, closure, e, tracers, buoyancy)
-    u★ = turbulent_velocity(i, j, k, grid, e)
-    return ℓ * u★
+@inline function convective_diffusivityᶜᶜᶜ(i, j, k, grid, convective_adjustment, closure, e, tracers, buoyancy, clock, tracer_bcs)
+    e² = max(zero(eltype(grid)), e[i, j, k])^2
+    Qᵇ = top_buoyancy_flux(i, j, grid, buoyancy, tracer_bcs, clock, fields)
+    Qᵇ = max(zero(eltype(grid)), Qᵇ)
+    return e² / Qᵇ
 end
 
-@inline function Kuᶜᶜᶜ(i, j, k, grid, closure, e, velocities, tracers, buoyancy)
-    K = stable_diffusivityᶜᶜᶜ(i, j, k, grid, closure, e, tracers, buoyancy)
-    σu = momentum_diffusivity_scale(i, j, k, grid, closure, velocities, tracers, buoyancy)
+@inline function Kuᶜᶜᶜ(i, j, k, grid, closure, e, args...)
+    K = unscaled_diffusivityᶜᶜᶜ(i, j, k, grid, closure.convective_adjustment, closure, e, args...)
+    σu = momentum_diffusivity_scale(i, j, k, grid, closure.convective_adjustment, closure, args...)
     return σu * K
 end
 
 @inline function Kcᶜᶜᶜ(i, j, k, grid, closure, e, velocities, tracers, buoyancy)
-    K = stable_diffusivityᶜᶜᶜ(i, j, k, grid, closure, e, tracers, buoyancy)
+    K = unscaled_diffusivityᶜᶜᶜ(i, j, k, grid, closure, e, tracers, buoyancy)
     σc = tracer_diffusivity_scale(i, j, k, grid, closure, velocities, tracers, buoyancy)
     return σc * K
 end
 
 @inline function Keᶜᶜᶜ(i, j, k, grid, closure, e, velocities, tracers, buoyancy)
-    K = stable_diffusivityᶜᶜᶜ(i, j, k, grid, closure, e, tracers, buoyancy)
+    K = unscaled_diffusivityᶜᶜᶜ(i, j, k, grid, closure, e, tracers, buoyancy)
     σe = TKE_diffusivity_scale(i, j, k, grid, closure, velocities, tracers, buoyancy)
     return σe * K
 end
