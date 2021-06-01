@@ -108,7 +108,7 @@ end
 
 @inline function (forcing::ContinuousForcing{LX, LY, LZ, F})(i, j, k, grid, clock, model_fields) where {LX, LY, LZ, F}
 
-    args = user_function_arguments(i, j, k, grid, model_fields, forcing.parameters, forcing)
+    args = user_function_arguments(i, j, k, grid, forcing, model_fields, forcing.parameters)
 
     return @inbounds forcing.func(node(LX(), LY(), LZ(), i, j, k, grid)..., clock.time, args...)
 end
