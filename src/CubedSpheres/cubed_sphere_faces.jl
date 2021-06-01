@@ -10,6 +10,9 @@ import Oceananigans.Fields: AbstractField, AbstractDataField, AbstractReducedFie
 import Oceananigans.Grids: new_data
 import Oceananigans.BoundaryConditions: FieldBoundaryConditions
 
+using Oceananigans.ImmersedBoundaries
+import Oceananigans.ImmersedBoundaries: ImmersedBoundaryGrid
+
 struct CubedSphereFaces{E, F}
     faces :: F
 end
@@ -44,7 +47,12 @@ function Base.show(io::IO, field::AbstractCubedSphereField)
 end
 
 # Just a single face
-const CubedSphereFaceField = AbstractField{X, Y, Z, A, <:ConformalCubedSphereFaceGrid} where {X, Y, Z, A}
+const ImmersedCubeSphereFaceGrid     = ImmersedBoundaryGrid{X, Y, Z, A, <:ConformalCubedSphereFaceGrid} where{X, Y, Z, A}
+const ImmersedCubeSphereFaceField    = AbstractField{X, Y, Z, A, <:ImmersedCubeSphereFaceGrid } where {X, Y, Z, A}
+const NonImmersedCubeSphereFaceField = AbstractField{X, Y, Z, A, <:ConformalCubedSphereFaceGrid} where {X, Y, Z, A}
+# const CubedSphereFaceField = Union{ NonImmersedCubeSphereFaceField, ImmersedCubeSphereFaceField }
+const CubedSphereFaceField = Union{ImmersedCubeSphereFaceField}
+# const CubedSphereFaceField = Union{NonImmersedCubeSphereFaceField}
 
 # There must be a way to dispatch in one function without ambiguity with `new_data.jl`...
 
@@ -113,5 +121,5 @@ minimum(f, field::AbstractCubedSphereField; dims=:) = minimum(minimum(f, face_fi
 maximum(f, field::AbstractCubedSphereField; dims=:) = maximum(maximum(f, face_field; dims) for face_field in faces(field))
 mean(f, field::AbstractCubedSphereField; dims=:) = mean(mean(f, face_field; dims) for face_field in faces(field))
 
-λnodes(field::CubedSphereFaceField{LX, LY, LZ}) where {LX, LY, LZ} = λnodes(LX(), LY(), LZ(), field.grid)
-φnodes(field::CubedSphereFaceField{LX, LY, LZ}) where {LX, LY, LZ} = φnodes(LX(), LY(), LZ(), field.grid)
+λnodes(field::CubedSphereFaceField{LX, LY, LZ, A}) where {LX, LY, LZ, A} = λnodes(LX(), LY(), LZ(), field.grid)
+φnodes(field::CubedSphereFaceField{LX, LY, LZ, A}) where {LX, LY, LZ, A} = φnodes(LX(), LY(), LZ(), field.grid)

@@ -38,7 +38,7 @@ function get_face(field::ImmersedBoundaryGrid, face_index)
 end
 
 function ImmersedBoundaryConformalCubedSphereGrid(filepath::AbstractString, FT=Float64; Nz, z, ibg_solid_func, architecture = CPU(), radius = R_Earth, halo = (1, 1, 1))
-    @warn "ConformalCubedSphereGrid is experimental: use with caution!"
+    @warn "ImmersedBoundaryConformalCubedSphereGrid is super experimental: use with extra caution!"
 
     face_topo = (Connected, Connected, Bounded)
     face_kwargs = (Nz=Nz, z=z, topology=face_topo, radius=radius, halo=halo, architecture=architecture)

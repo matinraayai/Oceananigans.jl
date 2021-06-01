@@ -7,6 +7,7 @@ using JLD2
 using Oceananigans
 using Oceananigans.Units
 using Oceananigans.ImmersedBoundaries: ImmersedBoundaryGrid, GridFittedBoundary
+import Oceananigans.ImmersedBoundaryConformalCubedSphereGrid
 
 using Oceananigans.Diagnostics: accurate_cell_advection_timescale
 
@@ -167,7 +168,7 @@ function cubed_sphere_rossby_haurwitz(grid_filepath; check_fields=false)
     @info "Stop time = $(prettytime(stop_time))"
 
     Δt = 20seconds
-    stop_time = 20*Δt
+    # stop_time = 20*Δt
 
     gravity_wave_speed = sqrt(g * H)
     min_spacing = filter(!iszero, grid.faces[1].Δyᶠᶠᵃ) |> minimum
@@ -221,7 +222,7 @@ include("animate_on_map_projection.jl")
 function run_cubed_sphere_rossby_haurwitz_validation(grid_filepath=datadep"cubed_sphere_32_grid/cubed_sphere_32_grid.jld2")
 
     simulation = cubed_sphere_rossby_haurwitz(grid_filepath)
-    return simulation
+    ## return simulation
 
     projections = [
         ccrs.NearsidePerspective(central_longitude=0, central_latitude=30),
