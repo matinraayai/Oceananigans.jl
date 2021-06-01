@@ -59,27 +59,26 @@ const EC = AbstractTurbulenceClosure{<:ExplicitTimeDiscretization}
 const VIC = AbstractTurbulenceClosure{<:VerticallyImplicitTimeDiscretization}
 
 # Filter explicitly-discretized closures.
-@inline z_diffusivity(clo::Tuple{<:EC},        Ks, ::Val{c_idx}) where {c_idx} = tuple(0)
-@inline z_diffusivity(clo::Tuple{<:VIC},       Ks, ::Val{c_idx}) where {c_idx} = tuple(z_diffusivity(clo[1], Ks[1], Val(c_idx)))
-@inline z_diffusivity(clo::Tuple{<:VIC, <:EC}, Ks, ::Val{c_idx}) where {c_idx} = tuple(z_diffusivity(clo[1], Ks[1], Val(c_idx)))
-@inline z_diffusivity(clo::Tuple{<:EC, <:VIC}, Ks, ::Val{c_idx}) where {c_idx} = tuple(z_diffusivity(clo[2], Ks[2], Val(c_idx)))
+@inline z_diffusivity(clo::Tuple{<:EC},         ::Val{c_idx}, Ks, args...) where {c_idx} = tuple(0)
+@inline z_diffusivity(clo::Tuple{<:VIC},        ::Val{c_idx}, Ks, args...) where {c_idx} = tuple(z_diffusivity(clo[1], Val(c_idx), Ks[1], args...))
+@inline z_diffusivity(clo::Tuple{<:VIC, <:EC},  ::Val{c_idx}, Ks, args...) where {c_idx} = tuple(z_diffusivity(clo[1], Val(c_idx), Ks[1], args...))
+@inline z_diffusivity(clo::Tuple{<:EC, <:VIC},  ::Val{c_idx}, Ks, args...) where {c_idx} = tuple(z_diffusivity(clo[2], Val(c_idx), Ks[2], args...))
+@inline z_diffusivity(clo::Tuple{<:VIC, <:VIC}, ::Val{c_idx}, Ks, args...) where {c_idx} = tuple(z_diffusivity(clo[1], Val(c_idx), Ks[1], args...),
+                                                                                                 z_diffusivity(clo[2], Val(c_idx), Ks[2], args...))
 
-@inline z_diffusivity(clo::Tuple{<:VIC, <:VIC}, Ks, ::Val{c_idx}) where {c_idx} = tuple(z_diffusivity(clo[1], Ks[1], Val(c_idx)),
-                                                                                        z_diffusivity(clo[2], Ks[2], Val(c_idx)))
+@inline z_diffusivity(clo::Tuple, ::Val{c_idx}, Ks) where c_idx = tuple(z_diffusivity(clo[1:2],   Val(c_idx), Ks[1:2], args...)...,
+                                                                        z_diffusivity(clo[3:end], Val(c_idx), Ks[3:end], args...)...)
 
-@inline z_diffusivity(clo::Tuple, Ks, ::Val{c_idx}) where c_idx = tuple(z_diffusivity(clo[1:2],   Ks[1:2], Val(c_idx))...,
-                                                                        z_diffusivity(clo[3:end], Ks[3:end], Val(c_idx))...)
+@inline z_viscosity(clo::Tuple{<:EC},         Ks, args...) = tuple(0)
+@inline z_viscosity(clo::Tuple{<:VIC},        Ks, args...) = tuple(z_viscosity(clo[1], Ks[1]))
+@inline z_viscosity(clo::Tuple{<:VIC, <:EC},  Ks, args...) = tuple(z_viscosity(clo[1], Ks[1]))
+@inline z_viscosity(clo::Tuple{<:EC, <:VIC},  Ks, args...) = tuple(z_viscosity(clo[2], Ks[2]))
 
-@inline z_viscosity(clo::Tuple{<:EC},         Ks) = tuple(0)
-@inline z_viscosity(clo::Tuple{<:VIC},        Ks) = tuple(z_viscosity(clo[1], Ks[1]))
-@inline z_viscosity(clo::Tuple{<:VIC, <:EC},  Ks) = tuple(z_viscosity(clo[1], Ks[1]))
-@inline z_viscosity(clo::Tuple{<:EC, <:VIC},  Ks) = tuple(z_viscosity(clo[2], Ks[2]))
+@inline z_viscosity(clo::Tuple{<:VIC, <:VIC}, Ks, args...) = tuple(z_viscosity(clo[1], Ks[1]),
+                                                                   z_viscosity(clo[2], Ks[2]))
 
-@inline z_viscosity(clo::Tuple{<:VIC, <:VIC}, Ks) = tuple(z_viscosity(clo[1], Ks[1]),
-                                                          z_viscosity(clo[2], Ks[2]))
-
-@inline z_viscosity(clo::Tuple, Ks) = tuple(z_viscosity(clo[1:2],   Ks[1:2])...,
-                                            z_viscosity(clo[3:end], Ks[3:end])...)
+@inline z_viscosity(clo::Tuple, Ks, args...) = tuple(z_viscosity(clo[1:2],   Ks[1:2])...,
+                                                     z_viscosity(clo[3:end], Ks[3:end])...)
 
 for coeff in (:νᶜᶜᶜ, :νᶠᶠᶜ, :νᶠᶜᶠ, :νᶜᶠᶠ, :κᶜᶜᶠ, :κᶜᶠᶜ, :κᶠᶜᶜ)
     @eval begin
@@ -103,3 +102,15 @@ const ExplicitOrNothing = Union{ExplicitTimeDiscretization, Nothing}
     combine_time_discretizations(combine_time_discretizations(disc1, disc2), other_discs...)
 
 @inline time_discretization(closures::Tuple) = combine_time_discretizations(time_discretization.(closures)...)
+
+#####
+##### Closure-specific boundary conditions...
+#####
+
+add_closure_specific_boundary_conditions(closure_tuple::Tuple{C1}, boundary_conditions, args...) where {C1} =
+    add_closure_specific_boundary_conditions(closure_tuple[1], boundary_conditions, args...)
+
+function add_closure_specific_boundary_conditions(closure_tuple::Tuple, boundary_conditions, args...)
+    boundary_conditions = add_closure_specific_boundary_conditions(closure_tuple[1], boundary_conditions, args...)
+    return add_closure_specific_boundary_conditions(closure_tuple[2:end], boundary_conditions, args...)
+end

@@ -65,9 +65,6 @@ function ab2_step_velocities!(velocities, model, Δt, χ)
                        model.closure,
                        nothing,
                        model.diffusivities,
-                       model.velocities,
-                       model.tracers,
-                       model.buoyancy,
                        dependencies = explicit_velocity_step_events[i])
     end
 
@@ -109,9 +106,7 @@ function ab2_step_tracers!(tracers, model, Δt, χ)
                        model.closure,
                        tracer_index,
                        model.diffusivities,
-                       model.velocities,
                        model.tracers,
-                       model.buoyancy,
                        dependencies = explicit_tracer_step_events[tracer_index])
     end
 

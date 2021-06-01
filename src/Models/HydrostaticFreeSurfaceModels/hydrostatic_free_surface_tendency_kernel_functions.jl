@@ -154,8 +154,8 @@ end
 
     return ( - div_Uc(i, j, k, grid, advection, velocities, e)
              - ∇_dot_qᶜ(i, j, k, grid, closure, e, tke_index, clock, diffusivities, tracers, buoyancy, velocities)
-             + shear_production(i, j, k, grid, closure, clock, velocities, tracers, buoyancy, diffusivities)
-             + buoyancy_flux(i, j, k, grid, closure, velocities, tracers, buoyancy)
+             + shear_production(i, j, k, grid, closure, diffusivities, clock, velocities, tracers, buoyancy)
+             + buoyancy_flux(i, j, k, grid, closure, diffusivities, velocities, tracers, buoyancy)
              - dissipation(i, j, k, grid, closure, tracers, buoyancy)
              + forcing(i, j, k, grid, clock, hydrostatic_prognostic_fields(velocities, free_surface, tracers)))
 end

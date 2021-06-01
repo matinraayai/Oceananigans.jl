@@ -26,6 +26,14 @@ validate_tracer_advection(tracer_advection::AbstractAdvectionScheme, grid) = tra
 
 PressureField(arch, grid) = (pHY′ = CenterField(arch, grid, TracerBoundaryConditions(grid)),)
 
+regularize_tupled_closure(closure) = closure
+
+function regularize_tupled_closure(closure_tuple::Tuple)
+    closure_array = [closure for closure in closure_tuple]
+    sort!(closure_array, by = closure -> closure isa TKEBasedVerticalDiffusivity, rev=true)
+    return Tuple(closure for closure in closure_array)
+end
+
 mutable struct HydrostaticFreeSurfaceModel{TS, E, A<:AbstractArchitecture, S,
                                            G, T, V, B, R, F, P, U, C, Φ, K, AF} <: AbstractModel{TS}
 
@@ -91,7 +99,7 @@ function HydrostaticFreeSurfaceModel(; grid,
                                   tracer_advection = CenteredSecondOrder(),
                                           buoyancy = SeawaterBuoyancy(eltype(grid)),
                                           coriolis = nothing,
-                                      free_surface = ExplicitFreeSurface(gravitational_acceleration=g_Earth),
+                                      free_surface = ImplicitFreeSurface(gravitational_acceleration=g_Earth),
                                forcing::NamedTuple = NamedTuple(),
                                            closure = nothing,
                    boundary_conditions::NamedTuple = NamedTuple(),
@@ -115,6 +123,7 @@ function HydrostaticFreeSurfaceModel(; grid,
     validate_buoyancy(buoyancy, tracernames(tracers))
 
     buoyancy = regularize_buoyancy(buoyancy)
+    closure = regularize_tupled_closure(closure)
 
     # Recursively "regularize" field-dependent boundary conditions by supplying list of tracer names.
     # We also regularize boundary conditions included in velocities, tracers, pressure, and diffusivities.

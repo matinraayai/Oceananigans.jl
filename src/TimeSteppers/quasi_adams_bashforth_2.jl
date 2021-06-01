@@ -99,6 +99,7 @@ function ab2_step!(model, Δt, χ)
                        model.closure,
                        tracer_index,
                        model.diffusivities,
+                       model.tracers,
                        dependencies = field_event)
     end
 

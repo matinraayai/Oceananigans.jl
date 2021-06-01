@@ -123,6 +123,8 @@ function VerticallyStretchedRectilinearGrid(FT = Float64;
     # Initialize vertically-stretched arrays on CPU
     Lz, zᵃᵃᶠ, zᵃᵃᶜ, Δzᵃᵃᶜ, Δzᵃᵃᶠ = generate_stretched_vertical_grid(FT, topology[3], Nz, Hz, z_faces)
 
+    all(Δzᵃᵃᶜ .> 0) && throw(ArgumentError("z_faces(k) must increase as k increases!"))
+
     # Construct uniform horizontal grid
     Lh, Nh, Hh, X₁ = (Lx, Ly), size[1:2], halo[1:2], (x[1], y[1])
     Δx, Δy = Δh = Lh ./ Nh
@@ -186,46 +188,48 @@ end
 get_z_face(z::Function, k) = z(k)
 get_z_face(z::AbstractVector, k) = CUDA.@allowscalar z[k]
 
-lower_exterior_Δzᵃᵃᶜ(z_topo,          zFi, Hz) = [zFi[end - Hz + k] - zFi[end - Hz + k - 1] for k = 1:Hz]
-lower_exterior_Δzᵃᵃᶜ(::Type{Bounded}, zFi, Hz) = [zFi[2]  - zFi[1] for k = 1:Hz]
+# For periodic grids, copy grid spacing from the other side of the grid.
+# For bounded grids, extend last physical grid spacing into the halo region.
+lower_exterior_Δzᵃᵃᶜ(z_topo,          ziᵃᵃᶠ, Hz) = [ziᵃᵃᶠ[end - Hz + k] - ziᵃᵃᶠ[end - Hz + k - 1] for k = 1:Hz]
+lower_exterior_Δzᵃᵃᶜ(::Type{Bounded}, ziᵃᵃᶠ, Hz) = [ziᵃᵃᶠ[2]  - ziᵃᵃᶠ[1] for k = 1:Hz]
 
-upper_exterior_Δzᵃᵃᶜ(z_topo,          zFi, Hz) = [zFi[k + 1] - zFi[k] for k = 1:Hz]
-upper_exterior_Δzᵃᵃᶜ(::Type{Bounded}, zFi, Hz) = [zFi[end]   - zFi[end - 1] for k = 1:Hz]
+upper_exterior_Δzᵃᵃᶜ(z_topo,          ziᵃᵃᶠ, Hz) = [ziᵃᵃᶠ[k + 1] - ziᵃᵃᶠ[k] for k = 1:Hz]
+upper_exterior_Δzᵃᵃᶜ(::Type{Bounded}, ziᵃᵃᶠ, Hz) = [ziᵃᵃᶠ[end]   - ziᵃᵃᶠ[end - 1] for k = 1:Hz]
 
 function generate_stretched_vertical_grid(FT, z_topo, Nz, Hz, z_faces)
 
-    # Ensure correct type for zF and derived quantities
-    interior_zF = zeros(FT, Nz+1)
+    # Ensure correct type for zᵃᵃᶜ and derived quantities
+    interior_zᵃᵃᶠ = zeros(FT, Nz+1)
 
     for k = 1:Nz+1
-        interior_zF[k] = get_z_face(z_faces, k)
+        interior_zᵃᵃᶠ[k] = get_z_face(z_faces, k)
     end
 
-    Lz = interior_zF[Nz+1] - interior_zF[1]
+    Lz = interior_zᵃᵃᶠ[Nz+1] - interior_zᵃᵃᶠ[1]
 
     # Build halo regions
-    ΔzF₋ = lower_exterior_Δzᵃᵃᶜ(z_topo, interior_zF, Hz)
-    ΔzF₊ = lower_exterior_Δzᵃᵃᶜ(z_topo, interior_zF, Hz)
+    Δzᵃᵃᶜ₋ = lower_exterior_Δzᵃᵃᶜ(z_topo, interior_zᵃᵃᶠ, Hz)
+    Δzᵃᵃᶜ₊ = upper_exterior_Δzᵃᵃᶜ(z_topo, interior_zᵃᵃᶠ, Hz)
 
-    z¹, zᴺ⁺¹ = interior_zF[1], interior_zF[Nz+1]
+    z¹, zᴺ⁺¹ = interior_zᵃᵃᶠ[1], interior_zᵃᵃᶠ[Nz+1]
 
-    zF₋ = [z¹   - sum(ΔzF₋[k:Hz]) for k = 1:Hz] # locations of faces in lower halo
-    zF₊ = [zᴺ⁺¹ + ΔzF₊[k]         for k = 1:Hz] # locations of faces in width of top halo region
+    lower_halo_zᵃᵃᶠ = [z¹   - sum(Δzᵃᵃᶜ₋[k:Hz]) for k = 1:Hz] # locations of faces in lower halo
+    upper_halo_zᵃᵃᶠ = [zᴺ⁺¹ + Δzᵃᵃᶜ₊[k]         for k = 1:Hz] # locations of faces in width of top halo region
 
-    zF = vcat(zF₋, interior_zF, zF₊)
+    zᵃᵃᶠ = vcat(lower_halo_zᵃᵃᶠ, interior_zᵃᵃᶠ, upper_halo_zᵃᵃᶠ)
 
     # Build cell centers, cell center spacings, and cell interface spacings
     TCz = total_length(Center, z_topo, Nz, Hz)
-     zC = [ (zF[k + 1] + zF[k]) / 2 for k = 1:TCz ]
-    ΔzC = [  zC[k] - zC[k - 1]      for k = 2:TCz ]
+     zᵃᵃᶜ = [ (zᵃᵃᶠ[k + 1] + zᵃᵃᶠ[k]) / 2 for k = 1:TCz ]
+    Δzᵃᵃᶠ = [  zᵃᵃᶜ[k] - zᵃᵃᶜ[k - 1]      for k = 2:TCz ]
 
     # Trim face locations for periodic domains
     TFz = total_length(Face, z_topo, Nz, Hz)
-    zF = zF[1:TFz]
+    zᵃᵃᶠ = zᵃᵃᶠ[1:TFz]
 
-    ΔzF = [zF[k + 1] - zF[k] for k = 1:TFz-1]
+    Δzᵃᵃᶜ = [zᵃᵃᶠ[k + 1] - zᵃᵃᶠ[k] for k = 1:TFz-1]
 
-    return Lz, zF, zC, ΔzF, ΔzC
+    return Lz, zᵃᵃᶠ, zᵃᵃᶜ, Δzᵃᵃᶜ, Δzᵃᵃᶠ
 end
 
 """
@@ -256,7 +260,8 @@ function with_halo(new_halo, old_grid::VerticallyStretchedRectilinearGrid)
     new_grid = VerticallyStretchedRectilinearGrid(eltype(old_grid);
                                                   architecture = old_grid.architecture,
                                                   size = size,
-                                                  x = x, y = y,
+                                                  x = x,
+                                                  y = y,
                                                   z_faces = old_grid.zᵃᵃᶠ,
                                                   topology = topo,
                                                   halo = new_halo)
@@ -304,20 +309,20 @@ Adapt.adapt_structure(to, grid::VerticallyStretchedRectilinearGrid{FT, TX, TY, T
 #####
 
 @inline xnode(::Center, i, grid::VerticallyStretchedRectilinearGrid) = @inbounds grid.xᶜᵃᵃ[i]
-@inline xnode(::Face, i, grid::VerticallyStretchedRectilinearGrid) = @inbounds grid.xᶠᵃᵃ[i]
+@inline xnode(::Face,   i, grid::VerticallyStretchedRectilinearGrid) = @inbounds grid.xᶠᵃᵃ[i]
 
 @inline ynode(::Center, j, grid::VerticallyStretchedRectilinearGrid) = @inbounds grid.yᵃᶜᵃ[j]
-@inline ynode(::Face, j, grid::VerticallyStretchedRectilinearGrid) = @inbounds grid.yᵃᶠᵃ[j]
+@inline ynode(::Face,   j, grid::VerticallyStretchedRectilinearGrid) = @inbounds grid.yᵃᶠᵃ[j]
 
 @inline znode(::Center, k, grid::VerticallyStretchedRectilinearGrid) = @inbounds grid.zᵃᵃᶜ[k]
-@inline znode(::Face, k, grid::VerticallyStretchedRectilinearGrid) = @inbounds grid.zᵃᵃᶠ[k]
+@inline znode(::Face,   k, grid::VerticallyStretchedRectilinearGrid) = @inbounds grid.zᵃᵃᶠ[k]
 
 all_x_nodes(::Type{Center}, grid::VerticallyStretchedRectilinearGrid) = grid.xᶜᵃᵃ
-all_x_nodes(::Type{Face}, grid::VerticallyStretchedRectilinearGrid) = grid.xᶠᵃᵃ
+all_x_nodes(::Type{Face},   grid::VerticallyStretchedRectilinearGrid) = grid.xᶠᵃᵃ
 all_y_nodes(::Type{Center}, grid::VerticallyStretchedRectilinearGrid) = grid.yᵃᶜᵃ
-all_y_nodes(::Type{Face}, grid::VerticallyStretchedRectilinearGrid) = grid.yᵃᶠᵃ
+all_y_nodes(::Type{Face},   grid::VerticallyStretchedRectilinearGrid) = grid.yᵃᶠᵃ
 all_z_nodes(::Type{Center}, grid::VerticallyStretchedRectilinearGrid) = grid.zᵃᵃᶜ
-all_z_nodes(::Type{Face}, grid::VerticallyStretchedRectilinearGrid) = grid.zᵃᵃᶠ
+all_z_nodes(::Type{Face},   grid::VerticallyStretchedRectilinearGrid) = grid.zᵃᵃᶠ
 
 #
 # Get minima of grid
