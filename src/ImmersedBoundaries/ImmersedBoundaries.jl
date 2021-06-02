@@ -57,6 +57,10 @@ const IBG = ImmersedBoundaryGrid
 
 Adapt.adapt_structure(to, ibg::IBG) = ImmersedBoundaryGrid(adapt(to, ibg.grid), adapt(to, ibg.immersed_boundary))
 
+underlying_grid(field::AbstractField) = underlying_grid(field.grid)
+underlying_grid(grid) = grid
+underlying_grid(ibg::ImmersedBoundaryGrid) = ibg.grid
+
 include("immersed_grid_metrics.jl")
 include("grid_fitted_immersed_boundary.jl")
 include("mask_immersed_field.jl")
