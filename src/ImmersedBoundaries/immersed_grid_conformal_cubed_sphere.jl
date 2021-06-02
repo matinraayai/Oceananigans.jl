@@ -41,6 +41,8 @@ function ImmersedBoundaryConformalCubedSphereGrid(filepath::AbstractString, FT=F
     @warn "ImmersedBoundaryConformalCubedSphereGrid is super experimental: use with extra caution!"
 
     face_topo = (Connected, Connected, Bounded)
+    # face_topo = (Bounded, Bounded, Bounded)
+    halo = (2, 2, 1)
     face_kwargs = (Nz=Nz, z=z, topology=face_topo, radius=radius, halo=halo, architecture=architecture)
 
     underlying_faces = Tuple(ConformalCubedSphereFaceGrid(filepath, FT; face=n, face_kwargs...) for n in 1:6)
