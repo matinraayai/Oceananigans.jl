@@ -16,21 +16,21 @@ function plot_cubed_sphere_tracer_field!(fig, ax, var, grid; add_colorbar, trans
 
     Nf = grid["faces"] |> keys |> length
     # CNH AGHHHH
-    # Nx = grid["faces/1/grid/Nx"]
-    # Ny = grid["faces/1/grid/Ny"]
-    # Hx = grid["faces/1/grid/Hx"]
-    # Hy = grid["faces/1/grid/Hy"]
-    Nx = grid["faces/1/Nx"]
-    Ny = grid["faces/1/Ny"]
-    Hx = grid["faces/1/Hx"]
-    Hy = grid["faces/1/Hy"]
+    Nx = grid["faces/1/grid/Nx"]
+    Ny = grid["faces/1/grid/Ny"]
+    Hx = grid["faces/1/grid/Hx"]
+    Hy = grid["faces/1/grid/Hy"]
+    # Nx = grid["faces/1/Nx"]
+    # Ny = grid["faces/1/Ny"]
+    # Hx = grid["faces/1/Hx"]
+    # Hy = grid["faces/1/Hy"]
 
     for face in 1:Nf
         # CNH AGHHHH
-        # λᶠᶠᵃ = grid["faces/$face/grid/λᶠᶠᵃ"][1+Hx:Nx+2Hx, 1+Hy:Ny+2Hy]
-        # φᶠᶠᵃ = grid["faces/$face/grid/φᶠᶠᵃ"][1+Hx:Nx+2Hx, 1+Hy:Ny+2Hy]
-        λᶠᶠᵃ = grid["faces/$face/λᶠᶠᵃ"][1+Hx:Nx+2Hx, 1+Hy:Ny+2Hy]
-        φᶠᶠᵃ = grid["faces/$face/φᶠᶠᵃ"][1+Hx:Nx+2Hx, 1+Hy:Ny+2Hy]
+        λᶠᶠᵃ = grid["faces/$face/grid/λᶠᶠᵃ"][1+Hx:Nx+2Hx, 1+Hy:Ny+2Hy]
+        φᶠᶠᵃ = grid["faces/$face/grid/φᶠᶠᵃ"][1+Hx:Nx+2Hx, 1+Hy:Ny+2Hy]
+        # λᶠᶠᵃ = grid["faces/$face/λᶠᶠᵃ"][1+Hx:Nx+2Hx, 1+Hy:Ny+2Hy]
+        # φᶠᶠᵃ = grid["faces/$face/φᶠᶠᵃ"][1+Hx:Nx+2Hx, 1+Hy:Ny+2Hy]
 
         var_face = var[face][:, :, 1]
 
@@ -111,7 +111,7 @@ function animate_rossby_haurwitz(; projections=[ccrs.Robinson()])
     # See: https://stackoverflow.com/a/29582287
     run(`ffmpeg -y -i $filename_pattern -c:v libx264 -vf "fps=30, crop=trunc(iw/2)*2:trunc(ih/2)*2" -pix_fmt yuv420p $output_filename`)
 
-    [rm(f) for f in glob("cubed_sphere_rossby_haurwitz_*.png")]
+    # [rm(f) for f in glob("cubed_sphere_rossby_haurwitz_*.png")]
 
     return nothing
 end
