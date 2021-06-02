@@ -2,6 +2,8 @@ using Oceananigans.CubedSpheres
 using Oceananigans.BoundaryConditions: fill_halo_regions!
 using Oceananigans.CubedSpheres: west_halo, east_halo, south_halo, north_halo, fill_horizontal_velocity_halos!, get_face
 
+import Oceananigans: ImmersedBoundaryConformalCubedSphereGrid
+
 # Opposite of the `Base.digits` function
 # Source: https://stackoverflow.com/a/55529778
 function undigits(d; base=10)
@@ -20,7 +22,11 @@ for arch in archs
     @testset "Cubed sphere tracer halo exchange [$(typeof(arch))]" begin
         @info "  Testing cubed sphere tracer halo exchange [$(typeof(arch))]..."
 
-        grid = ConformalCubedSphereGrid(cs32_filepath, architecture=arch, Nz=1, z=(-1, 0))
+        # grid = ConformalCubedSphereGrid(cs32_filepath, architecture=arch, Nz=1, z=(-1, 0))
+
+        solid(x, y, z, i, j, k) = false
+        grid = ImmersedBoundaryConformalCubedSphereGrid(cs32_filepath, Nz=1, z=(-1, 0), ibg_solid_func=solid)
+
         field = CenterField(arch, grid)
 
         ## We will fill each grid point with a 5-digit integer "fiijj" where
@@ -371,7 +377,11 @@ for arch in archs
     @testset "Cubed sphere velocity halo exchange [$(typeof(arch))]" begin
         @info "  Testing cubed sphere velocity halo exchange [$(typeof(arch))]..."
 
-        grid = ConformalCubedSphereGrid(cs32_filepath, architecture=arch, Nz=1, z=(-1, 0))
+        # grid = ConformalCubedSphereGrid(cs32_filepath, architecture=arch, Nz=1, z=(-1, 0))
+
+        solid(x, y, z, i, j, k) = false
+        grid = ImmersedBoundaryConformalCubedSphereGrid(cs32_filepath, Nz=1, z=(-1, 0), ibg_solid_func=solid)
+
 
         u_field = XFaceField(arch, grid)
         v_field = YFaceField(arch, grid)

@@ -152,9 +152,9 @@ group = get(ENV, "TEST_GROUP", :all) |> Symbol
 
     if group == :cubed_sphere || group == :all
         @testset "Cubed sphere tests" begin
-            include("test_cubed_spheres.jl")
+            ## include("test_cubed_spheres.jl")
             include("test_cubed_sphere_halo_exchange.jl")
-            include("test_cubed_sphere_circulation.jl")
+            ## include("test_cubed_sphere_circulation.jl")
         end
     end
 
