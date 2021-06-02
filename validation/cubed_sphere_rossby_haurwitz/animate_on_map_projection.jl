@@ -27,8 +27,8 @@ function plot_cubed_sphere_tracer_field!(fig, ax, var, grid; add_colorbar, trans
 
     for face in 1:Nf
         # CNH AGHHHH
-        λᶠᶠᵃ = grid["faces/$face/grid/λᶠᶠᵃ"][1+Hx:Nx+2Hx, 1+Hy:Ny+2Hy]
-        φᶠᶠᵃ = grid["faces/$face/grid/φᶠᶠᵃ"][1+Hx:Nx+2Hx, 1+Hy:Ny+2Hy]
+        λᶠᶠᵃ = grid["faces/$face/grid/λᶠᶠᵃ"][1+Hx:Nx+Hx+1, 1+Hy:Ny+Hy+1]
+        φᶠᶠᵃ = grid["faces/$face/grid/φᶠᶠᵃ"][1+Hx:Nx+Hx+1, 1+Hy:Ny+Hy+1]
         # λᶠᶠᵃ = grid["faces/$face/λᶠᶠᵃ"][1+Hx:Nx+2Hx, 1+Hy:Ny+2Hy]
         # φᶠᶠᵃ = grid["faces/$face/φᶠᶠᵃ"][1+Hx:Nx+2Hx, 1+Hy:Ny+2Hy]
 
