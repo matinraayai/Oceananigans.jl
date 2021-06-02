@@ -9,6 +9,9 @@ using Oceananigans.Units
 
 using Oceananigans.Diagnostics: accurate_cell_advection_timescale
 
+using Oceananigans.ImmersedBoundaries: ImmersedBoundaryGrid, GridFittedBoundary
+import Oceananigans.ImmersedBoundaryConformalCubedSphereGrid
+
 Logging.global_logger(OceananigansLogger())
 
 #####
@@ -64,7 +67,10 @@ solid body rotation and the polar axis (degrees).
 """
 function cubed_sphere_tracer_advection(; face_number, α)
 
-    grid = ConformalCubedSphereGrid(cs32_filepath, Nz=1, z=(-1, 0))
+    # grid = ConformalCubedSphereGrid(cs32_filepath, Nz=1, z=(-1, 0))
+    solid(x, y, z, i, j, k) = false
+    grid = ImmersedBoundaryConformalCubedSphereGrid(cs32_filepath, Nz=1, z=(-1, 0), ibg_solid_func=solid)
+
 
     ## Prescribed velocities and initial condition according to Williamson et al. (1992) §3.1
 
