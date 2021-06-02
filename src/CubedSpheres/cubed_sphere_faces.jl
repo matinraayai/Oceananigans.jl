@@ -50,16 +50,9 @@ end
 const ImmersedCubeSphereFaceGrid     = ImmersedBoundaryGrid{X, Y, Z, A, <:ConformalCubedSphereFaceGrid} where{X, Y, Z, A}
 const ImmersedCubeSphereFaceField    = AbstractField{X, Y, Z, A, <:ImmersedCubeSphereFaceGrid } where {X, Y, Z, A}
 const NonImmersedCubeSphereFaceField = AbstractField{X, Y, Z, A, <:ConformalCubedSphereFaceGrid} where {X, Y, Z, A}
-#
-# This line causes errors in type parsing during initial load. Not sure why! Ignoring this for now!
-# const CubedSphereFaceField = Union{ NonImmersedCubeSphereFaceField, ImmersedCubeSphereFaceField }
-#
-#CNH with Immersed    : const CubedSphereFaceField = Union{ImmersedCubeSphereFaceField}
-#CNH without Immersed : const CubedSphereFaceField = Union{NonImmersedCubeSphereFaceField}
-const CubedSphereFaceField = Union{NonImmersedCubeSphereFaceField}
+const CubedSphereFaceField = Union{NonImmersedCubeSphereFaceField{X, Y, Z, A}, ImmersedCubeSphereFaceField{X, Y, Z, A}} where {X, Y, Z, A}
 
 # There must be a way to dispatch in one function without ambiguity with `new_data.jl`...
-
 function new_data(FT, arch::AbstractCPUArchitecture, grid::ConformalCubedSphereGrid, (X, Y, Z))
     faces = Tuple(new_data(FT, arch, face_grid, (X, Y, Z)) for face_grid in grid.faces)
     return CubedSphereFaces{typeof(faces[1]), typeof(faces)}(faces)
