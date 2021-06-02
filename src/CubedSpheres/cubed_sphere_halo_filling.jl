@@ -1,5 +1,7 @@
 import CUDA
 
+using Oceananigans.ImmersedBoundaries: underlying_grid
+
 import Oceananigans.BoundaryConditions:
     fill_halo_regions!, fill_top_halo!, fill_bottom_halo!, fill_west_halo!, fill_east_halo!, fill_south_halo!, fill_north_halo!
 
@@ -30,7 +32,8 @@ end
 
 function fill_west_halo!(field::CubedSphereFaceField{LX, LY, LZ}, cubed_sphere_field) where {LX, LY, LZ}
     location = (LX, LY, LZ)
-    dest_halo = underlying_west_halo(field.data, field.grid, LX)
+    grid = underlying_grid(field) # distinguishes between the underlying grid and the ImmersedBoundaryGrid
+    dest_halo = underlying_west_halo(field.data, grid, LX)
 
     exchange_info = field.boundary_conditions.west.condition
     src_face_number = exchange_info.to_face
@@ -48,7 +51,8 @@ end
 
 function fill_east_halo!(field::CubedSphereFaceField{LX, LY, LZ}, cubed_sphere_field) where {LX, LY, LZ}
     location = (LX, LY, LZ)
-    dest_halo = underlying_east_halo(field.data, field.grid, LX)
+    grid = underlying_grid(field) # distinguishes between the underlying grid and the ImmersedBoundaryGrid
+    dest_halo = underlying_east_halo(field.data, grid, LX)
 
     exchange_info = field.boundary_conditions.east.condition
     src_face_number = exchange_info.to_face
@@ -66,7 +70,8 @@ end
 
 function fill_south_halo!(field::CubedSphereFaceField{LX, LY, LZ}, cubed_sphere_field) where {LX, LY, LZ}
     location = (LX, LY, LZ)
-    dest_halo = underlying_south_halo(field.data, field.grid, LY)
+    grid = underlying_grid(field) # distinguishes between the underlying grid and the ImmersedBoundaryGrid
+    dest_halo = underlying_south_halo(field.data, grid, LY)
 
     exchange_info = field.boundary_conditions.south.condition
     src_face_number = exchange_info.to_face
@@ -84,7 +89,8 @@ end
 
 function fill_north_halo!(field::CubedSphereFaceField{LX, LY, LZ}, cubed_sphere_field) where {LX, LY, LZ}
     location = (LX, LY, LZ)
-    dest_halo = underlying_north_halo(field.data, field.grid, LY)
+    grid = underlying_grid(field) # distinguishes between the underlying grid and the ImmersedBoundaryGrid
+    dest_halo = underlying_north_halo(field.data, grid, LY)
 
     exchange_info = field.boundary_conditions.north.condition
     src_face_number = exchange_info.to_face
@@ -101,9 +107,10 @@ function fill_north_halo!(field::CubedSphereFaceField{LX, LY, LZ}, cubed_sphere_
 end
 
 # Don't worry about this when not on a cubed sphere.
-fill_horizontal_velocity_halos!(u, v, arch) = nothing
+#fill_horizontal_velocity_halos!(u, v, arch) = nothing
 
-function fill_horizontal_velocity_halos!(u::CubedSphereField, v::CubedSphereField, arch)
+#function fill_horizontal_velocity_halos!(u::CubedSphereField, v::CubedSphereField, arch)
+function fill_horizontal_velocity_halos!(u, v, arch)
 
     ## Fill the top and bottom halos.
     fill_halo_regions!(u, arch, cubed_sphere_exchange=false)
