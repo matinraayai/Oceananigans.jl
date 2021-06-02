@@ -66,7 +66,8 @@ A  = 1e-5 * H  # Amplitude of the perturbation
 Δλ = 10  # Longitudinal width
 Δφ = 10  # Latitudinal width
 
-η′(λ, φ, z) = A * exp(- (λ - λ₀)^2 / Δλ^2) * exp(- (φ - φ₀)^2 / Δφ^2)
+# η′(λ, φ, z) = A * exp(- (λ - λ₀)^2 / Δλ^2) * exp(- (φ - φ₀)^2 / Δφ^2)
+η′(λ, φ) = A * exp(- (λ - λ₀)^2 / Δλ^2) * exp(- (φ - φ₀)^2 / Δφ^2)
 
 set!(model, η=η′)
 

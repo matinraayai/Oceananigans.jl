@@ -129,10 +129,12 @@ function fill_north_halo!(field::CubedSphereFaceField{LX, LY, LZ}, cubed_sphere_
 end
 
 # Don't worry about this when not on a cubed sphere.
-#fill_horizontal_velocity_halos!(u, v, arch) = nothing
+# This currently handles case of "cube sphere face" 
+fill_horizontal_velocity_halos!(u, v, arch) = nothing
 
-#function fill_horizontal_velocity_halos!(u::CubedSphereField, v::CubedSphereField, arch)
-function fill_horizontal_velocity_halos!(u, v, arch)
+# Currently need typing here to force FaceField to use dispatch above e.g. nothing
+function fill_horizontal_velocity_halos!(u::CubedSphereField, v::CubedSphereField, arch)
+# function fill_horizontal_velocity_halos!(u, v, arch)
 
     ## Fill the top and bottom halos.
     fill_halo_regions!(u, arch, cubed_sphere_exchange=false)
