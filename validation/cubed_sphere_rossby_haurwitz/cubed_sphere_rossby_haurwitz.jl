@@ -96,11 +96,11 @@ function cubed_sphere_rossby_haurwitz(grid_filepath; check_fields=false)
     ## Grid setup
 
     H = 8kilometers
-    ## underlying_grid = ConformalCubedSphereGrid(grid_filepath, Nz=1, z=(-H, 0))
+    underlying_grid = ConformalCubedSphereGrid(grid_filepath, Nz=1, z=(-H, 0))
     solid(x, y, z, i, j, k) = false
-    ## grid = ImmersedBoundaryGrid(underlying_grid, GridFittedBoundary(solid))
+    grid = underlying_grid
 
-    grid = ImmersedBoundaryConformalCubedSphereGrid(grid_filepath, Nz=1, z=(-H, 0), ibg_solid_func=solid)
+    # grid = ImmersedBoundaryConformalCubedSphereGrid(grid_filepath, Nz=1, z=(-H, 0), ibg_solid_func=solid)
 
     ### return grid
     ### grid = underlying_grid 
@@ -111,6 +111,7 @@ function cubed_sphere_rossby_haurwitz(grid_filepath; check_fields=false)
               architecture = CPU(),
                       grid = grid,
         momentum_advection = VectorInvariant(),
+        # momentum_advection = nothing,
               free_surface = ExplicitFreeSurface(gravitational_acceleration=100),
                   coriolis = HydrostaticSphericalCoriolis(scheme = VectorInvariantEnstrophyConserving()),
                    closure = nothing,
@@ -168,7 +169,7 @@ function cubed_sphere_rossby_haurwitz(grid_filepath; check_fields=false)
     @info "Stop time = $(prettytime(stop_time))"
 
     Δt = 20seconds
-    stop_time = 23980*Δt
+    stop_time = 10*Δt
 
     gravity_wave_speed = sqrt(g * H)
     min_spacing = filter(!iszero, grid.faces[1].Δyᶠᶠᵃ) |> minimum
@@ -196,11 +197,14 @@ function cubed_sphere_rossby_haurwitz(grid_filepath; check_fields=false)
         fields_to_check = (
             u = model.velocities.u,
             v = model.velocities.v,
-            η = model.free_surface.η
+            η = model.free_surface.η,
+           Gu = model.timestepper.Gⁿ.u,
+           Gv = model.timestepper.Gⁿ.v,
+           Gη = model.timestepper.Gⁿ.η
         )
 
         simulation.diagnostics[:state_checker] =
-            StateChecker(model, fields=fields_to_check, schedule=IterationInterval(20))
+            StateChecker(model, fields=fields_to_check, schedule=IterationInterval(1))
     end
 
     output_fields = merge(model.velocities, (η=model.free_surface.η,))
@@ -221,7 +225,7 @@ include("animate_on_map_projection.jl")
 
 function run_cubed_sphere_rossby_haurwitz_validation(grid_filepath=datadep"cubed_sphere_32_grid/cubed_sphere_32_grid.jld2")
 
-    simulation = cubed_sphere_rossby_haurwitz(grid_filepath)
+    simulation = cubed_sphere_rossby_haurwitz(grid_filepath, check_fields=true)
     ## return simulation
 
     projections = [
@@ -229,7 +233,7 @@ function run_cubed_sphere_rossby_haurwitz_validation(grid_filepath=datadep"cubed
         ccrs.NearsidePerspective(central_longitude=180, central_latitude=-30)
     ]
 
-    animate_rossby_haurwitz(projections=projections)
+    # animate_rossby_haurwitz(projections=projections)
 
     return simulation
 end

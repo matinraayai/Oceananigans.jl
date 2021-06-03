@@ -63,9 +63,9 @@ central_latitude  = (0,  0, 90,   0,   0, -90)
 function cubed_sphere_surface_gravity_waves(; face_number)
 
     H = 4kilometers
-    # grid = ConformalCubedSphereGrid(cs32_filepath, Nz=1, z=(-H, 0))
-    solid(x, y, z, i, j, k) = false
-    grid = ImmersedBoundaryConformalCubedSphereGrid(cs32_filepath, Nz=1, z=(-H, 0), ibg_solid_func=solid)
+    grid = ConformalCubedSphereGrid(cs32_filepath, Nz=1, z=(-H, 0))
+    # solid(x, y, z, i, j, k) = false
+    # grid = ImmersedBoundaryConformalCubedSphereGrid(cs32_filepath, Nz=1, z=(-H, 0), ibg_solid_func=solid)
 
     ## Model setup
 
@@ -99,12 +99,13 @@ function cubed_sphere_surface_gravity_waves(; face_number)
     ## Simulation setup
 
     Δt = 10minutes
+    end_time = Δt*10
 
     cfl = CFL(Δt, accurate_cell_advection_timescale)
 
     simulation = Simulation(model,
                         Δt = Δt,
-                 stop_time = 25days,
+                stop_time = end_time,
         iteration_interval = 1,
                   progress = Progress(time_ns()),
                 parameters = (; cfl)
@@ -150,7 +151,7 @@ function run_cubed_sphere_surface_gravity_waves_validation()
     ]
 
     # for f in 1:6
-    for f in 1:1
-        animate_surface_gravity_waves(face_number=f, projections=projections)
-    end
+    # for f in 1:1
+    #     animate_surface_gravity_waves(face_number=f, projections=projections)
+    # end
 end
