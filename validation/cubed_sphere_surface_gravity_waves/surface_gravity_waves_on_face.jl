@@ -10,6 +10,10 @@ using Oceananigans.Coriolis
 using Oceananigans.Models.HydrostaticFreeSurfaceModels
 using Oceananigans.TurbulenceClosures
 
+using Oceananigans.ImmersedBoundaries
+import Oceananigans.ImmersedBoundaries.ImmersedBoundaryGrid
+import Oceananigans.ImmersedBoundaries.GridFittedBoundary
+
 ENV["DATADEPS_ALWAYS_ACCEPT"] = "true"
 
 Logging.global_logger(OceananigansLogger())
@@ -29,7 +33,14 @@ H = 4kilometers
 # grid = RegularLatitudeLongitudeGrid(size = (60, 60, 1), longitude = (-40, 40), latitude = (-40, 40), z = (-H, 0))
 
 cs32_filepath = datadep"cubed_sphere_32_grid/cubed_sphere_32_grid.jld2"
-grid = ConformalCubedSphereFaceGrid(cs32_filepath, face=1, Nz=1, z=(-H, 0))
+underlying_grid = ConformalCubedSphereFaceGrid(cs32_filepath, face=1, Nz=1, z=(-H, 0))
+
+solid(x, y, z, i, j, k) = false
+grid = ImmersedBoundaryGrid(underlying_grid, GridFittedBoundary(solid) )
+
+    ### return grid
+    ### grid = underlying_grid
+
 
 ## Turbulent diffusivity closure
 
@@ -46,6 +57,7 @@ model = HydrostaticFreeSurfaceModel(
           architecture = CPU(),
                   grid = grid,
     momentum_advection = VectorInvariant(),
+    # momentum_advection = nothing,
           free_surface = ExplicitFreeSurface(gravitational_acceleration=0.1),
         # free_surface = ImplicitFreeSurface(gravitational_acceleration=0.1)
            #  coriolis = nothing,

@@ -19,8 +19,8 @@ end
 
 ds_cs = jldopen("cubed_sphere_face_waves.jld2")
 
-λᶜᶜᵃ = ds_cs["grid/λᶜᶜᵃ"][2:33, 2:33]
-φᶜᶜᵃ = ds_cs["grid/φᶜᶜᵃ"][2:33, 2:33]
+λᶜᶜᵃ = ds_cs["grid/grid/λᶜᶜᵃ"][2:33, 2:33]
+φᶜᶜᵃ = ds_cs["grid/grid/φᶜᶜᵃ"][2:33, 2:33]
 
 xc, yc, zc = geographic2cartesian(λᶜᶜᵃ, φᶜᶜᵃ)
 
