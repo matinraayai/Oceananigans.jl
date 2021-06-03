@@ -17,9 +17,9 @@ geographic2y(λ, φ, r=1) = r * sind(λ + 180) * sind(90 - φ)
 geographic2z(λ, φ, r=1) = r * cosd(90 - φ)
 
 Nf = file["grid/faces"] |> keys |> length
-Nx = file["grid/faces/1/Nx"]
-Ny = file["grid/faces/1/Ny"]
-Nz = file["grid/faces/1/Nz"]
+Nx = file["grid/faces/1/grid/Nx"]
+Ny = file["grid/faces/1/grid/Ny"]
+Nz = file["grid/faces/1/grid/Nz"]
 
 #####
 ##### Plot η
@@ -29,8 +29,8 @@ size_2d = (Nx, Ny * Nf)
 
 flatten_cubed_sphere(field, size) = reshape(cat(field..., dims=4), size)
 
-λ = flatten_cubed_sphere((file["grid/faces/$n/λᶜᶜᵃ"][2:33, 2:33] for n in 1:6), size_2d)
-φ = flatten_cubed_sphere((file["grid/faces/$n/φᶜᶜᵃ"][2:33, 2:33] for n in 1:6), size_2d)
+λ = flatten_cubed_sphere((file["grid/faces/$n/grid/λᶜᶜᵃ"][2:33, 2:33] for n in 1:6), size_2d)
+φ = flatten_cubed_sphere((file["grid/faces/$n/grid/φᶜᶜᵃ"][2:33, 2:33] for n in 1:6), size_2d)
 
 x = geographic2x.(λ, φ)
 y = geographic2y.(λ, φ)

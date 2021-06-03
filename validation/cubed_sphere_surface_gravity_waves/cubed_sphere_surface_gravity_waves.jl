@@ -9,6 +9,9 @@ using Oceananigans.Units
 
 using Oceananigans.Diagnostics: accurate_cell_advection_timescale
 
+using Oceananigans.ImmersedBoundaries: ImmersedBoundaryGrid, GridFittedBoundary
+import Oceananigans.ImmersedBoundaryConformalCubedSphereGrid
+
 Logging.global_logger(OceananigansLogger())
 
 #####
@@ -60,16 +63,20 @@ central_latitude  = (0,  0, 90,   0,   0, -90)
 function cubed_sphere_surface_gravity_waves(; face_number)
 
     H = 4kilometers
-    grid = ConformalCubedSphereGrid(cs32_filepath, Nz=1, z=(-H, 0))
+    # grid = ConformalCubedSphereGrid(cs32_filepath, Nz=1, z=(-H, 0))
+    solid(x, y, z, i, j, k) = false
+    grid = ImmersedBoundaryConformalCubedSphereGrid(cs32_filepath, Nz=1, z=(-H, 0), ibg_solid_func=solid)
 
     ## Model setup
 
     model = HydrostaticFreeSurfaceModel(
               architecture = CPU(),
                       grid = grid,
-        momentum_advection = nothing,
+        # momentum_advection = nothing,
+        momentum_advection = VectorInvariant(),
               free_surface = ExplicitFreeSurface(gravitational_acceleration=0.1),
-                  coriolis = nothing,
+        #         coriolis = nothing,
+                  coriolis = HydrostaticSphericalCoriolis(scheme = VectorInvariantEnstrophyConserving()),
                    closure = nothing,
                    tracers = nothing,
                   buoyancy = nothing
@@ -132,7 +139,8 @@ include("animate_on_map_projection.jl")
 
 function run_cubed_sphere_surface_gravity_waves_validation()
 
-    for f in 1:6
+    # for f in 1:6
+    for f in 1:1
         cubed_sphere_surface_gravity_waves(face_number=f)
     end
 
@@ -141,7 +149,8 @@ function run_cubed_sphere_surface_gravity_waves_validation()
         ccrs.NearsidePerspective(central_longitude=180, central_latitude=-30)
     ]
 
-    for f in 1:6
+    # for f in 1:6
+    for f in 1:1
         animate_surface_gravity_waves(face_number=f, projections=projections)
     end
 end
