@@ -41,7 +41,6 @@ function ImmersedBoundaryConformalCubedSphereGrid(filepath::AbstractString, FT=F
     @warn "ImmersedBoundaryConformalCubedSphereGrid is super experimental: use with extra caution!"
 
     face_topo = (Connected, Connected, Bounded)
-    # face_topo = (Bounded, Bounded, Bounded)
     halo = (2, 2, 1)
     face_kwargs = (Nz=Nz, z=z, topology=face_topo, radius=radius, halo=halo, architecture=architecture)
 
@@ -63,4 +62,3 @@ end
 @inline xnode(LX, LY, LZ, i, j, k, ibg::ImmersedBoundaryGrid) = xnode(LX, LY, LZ, i, j, k, ibg.grid)
 @inline ynode(LX, LY, LZ, i, j, k, ibg::ImmersedBoundaryGrid) = ynode(LX, LY, LZ, i, j, k, ibg.grid)
 @inline znode(LX, LY, LZ, i, j, k, ibg::ImmersedBoundaryGrid) = znode(LX, LY, LZ, i, j, k, ibg.grid)
-
