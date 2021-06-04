@@ -102,24 +102,17 @@ function TKEBasedVerticalDiffusivity(FT=Float64;
                                      diffusivity_scaling = RiDependentDiffusivityScaling{FT}(),
                                      dissipation_parameter = 2.91,
                                      mixing_length_parameter = 1.16,
-                                     convective_adjustment = nothing,
+                                     convective_adjustment = ConvectiveAdjustmentParameters{FT}(),
                                      surface_model = TKESurfaceFlux{FT}(),
                                      time_discretization::TD = VerticallyImplicitTimeDiscretization()) where TD
 
-    @warn "TKEBasedVerticalDiffusivity is an experimental turbulence closure that \n" *
-          "is unvalidated and whose default parameters are not calibrated for \n" * 
-          "realistic ocean conditions or for use in a three-dimensional \n" *
-          "simulation. Use with caution and report bugs and problems with physics \n" *
-          "to https://github.com/CliMA/Oceananigans.jl/issues. \n\n" *
-
-          "Note: `TKEBasedVerticalDiffusivity` will generally produce \n" *
-          "incorrect results if its parameters are altered _after_ \n" *
-          "model instantiation."
+    @warn "TKEBasedVerticalDiffusivity is an experimental and unvalidated turbulence closure."
 
     dissipation_parameter = convert(FT, dissipation_parameter)
     mixing_length_parameter = convert(FT, mixing_length_parameter)
     diffusivity_scaling = convert_eltype(FT, diffusivity_scaling)
     surface_model = convert_eltype(FT, surface_model)
+    convective_adjustment = convert_eltype(FT, convective_adjustment)
 
     return TKEBasedVerticalDiffusivity{TD}(diffusivity_scaling,
                                            dissipation_parameter,
@@ -200,25 +193,6 @@ Base.@kwdef struct TKESurfaceFlux{FT}
     CᵂwΔ :: FT = 1.31
 end
 
-@inline function top_tke_flux(i, j, grid, surface_model::TKESurfaceFlux, closure,
-                              buoyancy, fields, top_tracer_bcs, top_velocity_bcs, clock)
-
-    wΔ³ = top_convective_turbulent_velocity³(i, j, grid, clock, fields, buoyancy, top_tracer_bcs)
-    u★ = friction_velocity(i, j, grid, clock, fields, top_velocity_bcs)
-
-    Cᴰ = closure.dissipation_parameter
-    Cᵂu★ = surface_model.Cᵂu★
-    CᵂwΔ = surface_model.CᵂwΔ
-
-    return - Cᴰ * (Cᵂu★ * u★^3 + CᵂwΔ * wΔ³)
-end
-
-
-for S in (:RiDependentDiffusivityScaling, :TKESurfaceFlux)
-    @eval @inline convert_eltype(::Type{FT}, s::$S) where FT = $S{FT}(; Dict(p => getproperty(s, p) for p in propertynames(s))...)
-    @eval @inline convert_eltype(::Type{FT}, s::$S{FT}) where FT = s
-end
-
 #####
 ##### TKE top boundary condition
 #####
@@ -231,31 +205,45 @@ end
     return sqrt(sqrt(Qᵘ^2 + Qᵛ^2))
 end
 
-@inline function top_convective_turbulent_velocity³(i, j, grid, clock, fields, buoyancy, tracer_bcs)
+@inline function top_convective_turbulent_velocity³(i, j, grid, clock, fields, buoyancy, top_tracer_bcs)
     FT = eltype(grid)
-    Qᵇ = top_buoyancy_flux(i, j, grid, buoyancy, tracer_bcs, clock, fields)
+    Qᵇ = top_buoyancy_flux(i, j, grid, buoyancy, top_tracer_bcs, clock, fields)
     Δz = Δzᵃᵃᶜ(i, j, grid.Nz, grid)
     return max(zero(FT), Qᵇ) * Δz   
 end
 
-@inline function top_tke_flux(i, j, grid, clock, fields, parameters, closure)
+@inline top_tke_flux(i, j, grid, clock, fields, closures::Tuple, parameters) =
+    top_tke_flux(i, j, grid, clock, fields, closures[1], parameters)
+
+@inline function top_tke_flux(i, j, grid, clock, fields, closure::TKEVD, parameters)
     buoyancy = parameters.buoyancy
     top_tracer_bcs = parameters.top_tracer_boundary_conditions
     top_velocity_bcs = parameters.top_velocity_boundary_conditions
 
-    return top_tke_flux(i, j, grid, closure.surface_model, closure,
-                        buoyancy, fields, top_tracer_bcs, top_velocity_bcs, clock)
+    wΔ³ = top_convective_turbulent_velocity³(i, j, grid, clock, fields, buoyancy, top_tracer_bcs)
+    u★ = friction_velocity(i, j, grid, clock, fields, top_velocity_bcs)
+
+    Cᴰ = closure.dissipation_parameter
+    Cᵂu★ = closure.surface_model.Cᵂu★
+    CᵂwΔ = closure.surface_model.CᵂwΔ
+
+    return - Cᴰ * (Cᵂu★ * u★^3 + CᵂwΔ * wΔ³)
 end
 
-Base.@kwdef struct ConvectiveAdjustment{FT}
+Base.@kwdef struct ConvectiveAdjustmentParameters{FT}
     Cᴬu :: FT = 1.0
     Cᴬc :: FT = 10.0
-    Cᴬe :: FT = 2.0
+    Cᴬe :: FT = 10.0
 end
 
 #####
 ##### Utilities for model constructors
 #####
+
+for S in (:RiDependentDiffusivityScaling, :TKESurfaceFlux, :ConvectiveAdjustmentParameters)
+    @eval @inline convert_eltype(::Type{FT}, s::$S) where FT = $S{FT}(; Dict(p => getproperty(s, p) for p in propertynames(s))...)
+    @eval @inline convert_eltype(::Type{FT}, s::$S{FT}) where FT = s
+end
 
 """ Infer tracer boundary conditions from user_bcs and tracer_names. """
 function top_tracer_boundary_conditions(grid, tracer_names, user_bcs)
@@ -291,8 +279,7 @@ function add_closure_specific_boundary_conditions(closure::TKEVD,
 
     parameters = (buoyancy = buoyancy,
                   top_tracer_boundary_conditions = top_tracer_bcs,
-                  top_velocity_boundary_conditions = top_velocity_bcs,
-                  closure = closure)
+                  top_velocity_boundary_conditions = top_velocity_bcs)
 
     top_tke_bc = FluxBoundaryCondition(top_tke_flux, discrete_form=true, parameters=parameters)
 
@@ -338,42 +325,6 @@ function with_tracers(tracer_names, closure::TKEVD)
 end
 
 #####
-##### Diffusivity field utilities
-#####
-#
-    # Qᵇ = top_buoyancy_flux(i, j, grid, buoyancy, tracer_bcs, clock, fields)
-
-function calculate_diffusivities!(diffusivities, closure::TKEVD, model)
-
-    arch = model.architecture
-    grid = model.grid
-    velocities = model.velocities
-    tracers = model.tracers
-    buoyancy = model.buoyancy
-    clock = model.clock
-    top_tracer_bcs = top_tracer_boundary_conditions(grid, tracer_names, user_bcs)
-    e = tracers.e
-
-    event = launch!(arch, grid, :xyz,
-                    calculate_tke_diffusivities!, diffusivities, grid, closure, e, velocities,
-                    tracers, buoyancy, top_tracer_bcs, clock,
-                    dependencies=device_event(arch))
-
-    wait(device(arch), event)
-
-    return nothing
-end
-
-@kernel function calculate_tke_diffusivities!(diffusivities, grid, args...)
-    i, j, k, = @index(Global, NTuple)
-    @inbounds begin
-        diffusivities.Kᵘ[i, j, k] = Kuᶜᶜᶜ(i, j, k, grid, args...)
-        diffusivities.Kᶜ[i, j, k] = Kcᶜᶜᶜ(i, j, k, grid, args...)
-        diffusivities.Kᵉ[i, j, k] = Keᶜᶜᶜ(i, j, k, grid, args...)
-    end
-end
-
-#####
 ##### Mixing length
 #####
 
@@ -408,10 +359,6 @@ end
     ℓ_min = Δzᵃᵃᶜ(i, j, k, grid) / 2 # minimum mixing length...
     return max(ℓ_min, ℓ)
 end
-
-#####
-##### Diffusivities
-#####
 
 #####
 ##### "Stable" scales
@@ -462,49 +409,106 @@ end
 ##### "Unstable" scales
 #####
 
+@inline is_unstableᶜᶜᶜ(i, j, k, grid, tracers, buoyancy) = ℑzᵃᵃᶜ(i, j, k, grid, ∂z_b, buoyancy, tracers) < 0
+
 @inline function momentum_diffusivity_scale(i, j, k, grid, convective_adjustment, closure, velocities, tracers, buoyancy)
+    stable_scale = momentum_diffusivity_scale(i, j, k, grid, nothing, closure, velocities, tracers, buoyancy)
+    convective_scale = convective_adjustment.Cᴬu
+    ijk_unstable = is_unstableᶜᶜᶜ(i, j, k, grid, tracers, buoyancy)
+    return ifelse(ijk_unstable, convective_scale, stable_scale)
+end
+
+@inline function tracer_diffusivity_scale(i, j, k, grid, convective_adjustment, closure, velocities, tracers, buoyancy)
+    stable_scale = tracer_diffusivity_scale(i, j, k, grid, nothing, closure, velocities, tracers, buoyancy)
+    convective_scale = convective_adjustment.Cᴬc
+    ijk_unstable = is_unstableᶜᶜᶜ(i, j, k, grid, tracers, buoyancy)
+    return ifelse(ijk_unstable, convective_scale, stable_scale)
+end
+
+@inline function TKE_diffusivity_scale(i, j, k, grid, convective_adjustment, closure, velocities, tracers, buoyancy)
+    stable_scale = TKE_diffusivity_scale(i, j, k, grid, nothing, closure, velocities, tracers, buoyancy)
+    convective_scale = convective_adjustment.Cᴬe
+    ijk_unstable = is_unstableᶜᶜᶜ(i, j, k, grid, tracers, buoyancy)
+    return ifelse(ijk_unstable, convective_scale, stable_scale)
+end
+
+#####
+##### Diffusivities
+#####
 
 @inline turbulent_velocity(i, j, k, grid, e) = @inbounds sqrt(max(zero(eltype(grid)), e[i, j, k]))
 
-@inline function unscaled_diffusivityᶜᶜᶜ(i, j, k, grid, ::Nothing, closure, e, velocites, tracers, tracer_bcs, clock)
+@inline function unscaled_diffusivityᶜᶜᶜ(i, j, k, grid, ::Nothing, closure, e, tracers, buoyancy)
     ℓ = dissipation_mixing_lengthᶜᶜᶜ(i, j, k, grid, closure, e, tracers, buoyancy)
     u★ = turbulent_velocity(i, j, k, grid, e)
     return ℓ * u★
 end
 
-@inline function unscaled_diffusivityᶜᶜᶜ(i, j, k, grid, convective_adjustment, closure, e, velocities, tracers, buoyancy, clock, tracer_bcs)
-    K_stable = unscaled_diffusivityᶜᶜᶜ(i, j, k, grid, nothing, closure, e, tracers, buoyancy, clock, tracer_bcs)
-    K_convective = convective_diffusivityᶜᶜᶜ(i, j, k, grid, convective_adjustment, closure, e, tracers, buoyancy, clock, tracer_bcs)
-
-    Qᵇ = top_buoyancy_flux(i, j, grid, buoyancy, tracer_bcs, clock, merge(velocities, tracers))
-    N² = ℑzᵃᵃᶜ(i, j, k, grid, ∂z_b, buoyancy, tracers)
-    convecting = N² < 0 
-
-    return
+@inline function convective_diffusivityᶜᶜᶜ(i, j, k, grid, convective_adjustment, closure, e, velocities, tracers, buoyancy, top_tracer_bcs, clock)
+    @inbounds e² = max(zero(eltype(grid)), e[i, j, k])^2
+    Qᵇ = top_buoyancy_flux(i, j, grid, buoyancy, top_tracer_bcs, clock, merge(velocities, tracers))
+    return ifelse(Qᵇ > 0, e² / Qᵇ, zero(eltype(grid)))
 end
 
-@inline function convective_diffusivityᶜᶜᶜ(i, j, k, grid, convective_adjustment, closure, e, tracers, buoyancy, clock, tracer_bcs)
-    e² = max(zero(eltype(grid)), e[i, j, k])^2
-    Qᵇ = top_buoyancy_flux(i, j, grid, buoyancy, tracer_bcs, clock, fields)
-    Qᵇ = max(zero(eltype(grid)), Qᵇ)
-    return e² / Qᵇ
+@inline function unscaled_diffusivityᶜᶜᶜ(i, j, k, grid, convective_adjustment, closure, e, velocities, tracers, buoyancy, top_tracer_bcs, clock)
+    stable_K = unscaled_diffusivityᶜᶜᶜ(i, j, k, grid, nothing,               closure, e, tracers, buoyancy)
+    unstable_K = convective_diffusivityᶜᶜᶜ(i, j, k, grid, convective_adjustment, closure, e, velocities, tracers, buoyancy, top_tracer_bcs, clock)
+    ijk_unstable = is_unstableᶜᶜᶜ(i, j, k, grid, tracers, buoyancy)
+    return ifelse(ijk_unstable, unstable_K, stable_K)
 end
 
-@inline function Kuᶜᶜᶜ(i, j, k, grid, closure, e, args...)
-    K = unscaled_diffusivityᶜᶜᶜ(i, j, k, grid, closure.convective_adjustment, closure, e, args...)
-    σu = momentum_diffusivity_scale(i, j, k, grid, closure.convective_adjustment, closure, args...)
+#####
+##### Diffusivity field utilities
+#####
+
+function calculate_diffusivities!(diffusivities, closure::TKEVD, model)
+
+    arch = model.architecture
+    grid = model.grid
+    velocities = model.velocities
+    tracers = model.tracers
+    buoyancy = model.buoyancy
+    clock = model.clock
+    e = tracers.e
+
+    tracer_names = keys(model.tracers)
+    top_tracer_bc_tuple = Tuple(c.boundary_conditions.top for c in model.tracers)
+    top_tracer_bcs = NamedTuple{tracer_names}(top_tracer_bc_tuple)
+
+    event = launch!(arch, grid, :xyz,
+                    calculate_tke_diffusivities!, diffusivities, grid,
+                    closure, e, velocities, tracers, buoyancy, top_tracer_bcs, clock,
+                    dependencies=device_event(arch))
+
+    wait(device(arch), event)
+
+    return nothing
+end
+
+@kernel function calculate_tke_diffusivities!(diffusivities, grid, args...)
+    i, j, k, = @index(Global, NTuple)
+    @inbounds begin
+        diffusivities.Kᵘ[i, j, k] = Kuᶜᶜᶜ(i, j, k, grid, args...)
+        diffusivities.Kᶜ[i, j, k] = Kcᶜᶜᶜ(i, j, k, grid, args...)
+        diffusivities.Kᵉ[i, j, k] = Keᶜᶜᶜ(i, j, k, grid, args...)
+    end
+end
+
+@inline function Kuᶜᶜᶜ(i, j, k, grid, closure, e, velocities, tracers, buoyancy, top_tracer_bcs, clock)
+    K = unscaled_diffusivityᶜᶜᶜ(i, j, k, grid, closure.convective_adjustment, closure, e, velocities, tracers, buoyancy, top_tracer_bcs, clock)
+    σu = momentum_diffusivity_scale(i, j, k, grid, closure.convective_adjustment, closure, velocities, tracers, buoyancy)
     return σu * K
 end
 
-@inline function Kcᶜᶜᶜ(i, j, k, grid, closure, e, velocities, tracers, buoyancy)
-    K = unscaled_diffusivityᶜᶜᶜ(i, j, k, grid, closure, e, tracers, buoyancy)
-    σc = tracer_diffusivity_scale(i, j, k, grid, closure, velocities, tracers, buoyancy)
+@inline function Kcᶜᶜᶜ(i, j, k, grid, closure, e, velocities, tracers, buoyancy, top_tracer_bcs, clock)
+    K = unscaled_diffusivityᶜᶜᶜ(i, j, k, grid, closure.convective_adjustment, closure, e, velocities, tracers, buoyancy, top_tracer_bcs, clock)
+    σc = tracer_diffusivity_scale(i, j, k, grid, closure.convective_adjustment, closure, velocities, tracers, buoyancy)
     return σc * K
 end
 
-@inline function Keᶜᶜᶜ(i, j, k, grid, closure, e, velocities, tracers, buoyancy)
-    K = unscaled_diffusivityᶜᶜᶜ(i, j, k, grid, closure, e, tracers, buoyancy)
-    σe = TKE_diffusivity_scale(i, j, k, grid, closure, velocities, tracers, buoyancy)
+@inline function Keᶜᶜᶜ(i, j, k, grid, closure, e, velocities, tracers, buoyancy, top_tracer_bcs, clock)
+    K = unscaled_diffusivityᶜᶜᶜ(i, j, k, grid, closure.convective_adjustment, closure, e, velocities, tracers, buoyancy, top_tracer_bcs, clock)
+    σe = TKE_diffusivity_scale(i, j, k, grid, closure.convective_adjustment, closure, velocities, tracers, buoyancy)
     return σe * K
 end
 

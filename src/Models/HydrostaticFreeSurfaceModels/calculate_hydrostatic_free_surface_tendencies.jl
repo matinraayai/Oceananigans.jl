@@ -19,13 +19,7 @@ function calculate_tendencies!(model::HydrostaticFreeSurfaceModel)
 
     # Calculate contributions to momentum and tracer tendencies from user-prescribed fluxes across the
     # boundaries of the domain
-    calculate_hydrostatic_boundary_tendency_contributions!(model.timestepper.Gⁿ,
-                                                           model.architecture,
-                                                           model.velocities,
-                                                           model.free_surface,
-                                                           model.tracers,
-                                                           model.clock,
-                                                           fields(model))
+    calculate_hydrostatic_boundary_tendency_contributions!(model)
 
     return nothing
 end
@@ -160,13 +154,13 @@ end
 end
 
 #####
-##### Boundary condributions to hydrostatic free surface model
+##### Boundary contributions to hydrostatic free surface model
 #####
 
-function apply_flux_bcs!(Gcⁿ, events, c, arch, barrier, clock, model_fields)
-    x_bcs_event = apply_x_bcs!(Gcⁿ, c, arch, barrier, clock, model_fields)
-    y_bcs_event = apply_y_bcs!(Gcⁿ, c, arch, barrier, clock, model_fields)
-    z_bcs_event = apply_z_bcs!(Gcⁿ, c, arch, barrier, clock, model_fields)
+function apply_flux_bcs!(Gcⁿ, events, args...)
+    x_bcs_event = apply_x_bcs!(Gcⁿ, args...)
+    y_bcs_event = apply_y_bcs!(Gcⁿ, args...) 
+    z_bcs_event = apply_z_bcs!(Gcⁿ, args...)
 
     push!(events, x_bcs_event, y_bcs_event, z_bcs_event)
 
@@ -174,7 +168,16 @@ function apply_flux_bcs!(Gcⁿ, events, c, arch, barrier, clock, model_fields)
 end
 
 """ Apply boundary conditions by adding flux divergences to the right-hand-side. """
-function calculate_hydrostatic_boundary_tendency_contributions!(Gⁿ, arch, velocities, free_surface, tracers, clock, model_fields)
+function calculate_hydrostatic_boundary_tendency_contributions!(model)
+
+    Gⁿ = model.timestepper.Gⁿ
+    arch = model.architecture
+    velocities = model.velocities
+    free_surface = model.free_surface
+    tracers = model.tracers
+    clock = model.clock
+    model_fields = fields(model)
+    closure = model.closure
 
     barrier = Event(device(arch))
 
@@ -182,15 +185,15 @@ function calculate_hydrostatic_boundary_tendency_contributions!(Gⁿ, arch, velo
 
     # Velocity fields
     for i in (:u, :v)
-        apply_flux_bcs!(Gⁿ[i], events, velocities[i], arch, barrier, clock, model_fields)
+        apply_flux_bcs!(Gⁿ[i], events, velocities[i], arch, barrier, clock, model_fields, closure)
     end
 
     # Free surface
-    apply_flux_bcs!(Gⁿ.η, events, displacement(free_surface), arch, barrier, clock, model_fields)
+    apply_flux_bcs!(Gⁿ.η, events, displacement(free_surface), arch, barrier, clock, model_fields, closure)
 
     # Tracer fields
     for i in propertynames(tracers)
-        apply_flux_bcs!(Gⁿ[i], events, tracers[i], arch, barrier, clock, model_fields)
+        apply_flux_bcs!(Gⁿ[i], events, tracers[i], arch, barrier, clock, model_fields, closure)
     end
 
     events = filter(e -> typeof(e) <: Event, events)

@@ -94,8 +94,8 @@ NormalFlowBoundaryCondition(val; kwargs...) = BoundaryCondition(NormalFlow, val;
 @inline getbc(bc::BC{<:NormalFlow, Nothing}, i, j, grid, args...) = zero(eltype(grid))
 @inline getbc(bc::BC{<:Flux, Nothing}, i, j, grid, args...) = zero(eltype(grid))
 
-@inline getbc(bc::BC{C, <:Number},        args...)                         where C = bc.condition
-@inline getbc(bc::BC{C, <:AbstractArray}, i, j, grid, clock, model_fields) where C = @inbounds bc.condition[i, j]
-@inline getbc(bc::BC{C, <:Function},      i, j, grid, clock, model_fields) where C = bc.condition(i, j, grid, clock, model_fields)
+@inline getbc(bc::BC{C, <:Number},        args...)             where C = bc.condition
+@inline getbc(bc::BC{C, <:AbstractArray}, i, j, grid, args...) where C = @inbounds bc.condition[i, j]
+@inline getbc(bc::BC{C, <:Function},      i, j, grid, args...) where C = bc.condition(i, j, grid, args...)
 
 @inline Base.getindex(bc::BC{C, <:AbstractArray}, i, j) where C = getindex(bc.condition, i, j)
