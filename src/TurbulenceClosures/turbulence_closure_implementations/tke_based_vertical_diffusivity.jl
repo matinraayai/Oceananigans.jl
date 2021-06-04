@@ -232,8 +232,8 @@ end
 
 Base.@kwdef struct ConvectiveAdjustmentParameters{FT}
     Cᴬu :: FT = 1.0
-    Cᴬc :: FT = 10.0
-    Cᴬe :: FT = 10.0
+    Cᴬc :: FT = 100.0
+    Cᴬe :: FT = 100.0
 end
 
 #####
@@ -451,7 +451,7 @@ end
 end
 
 @inline function unscaled_diffusivityᶜᶜᶜ(i, j, k, grid, convective_adjustment, closure, e, velocities, tracers, buoyancy, top_tracer_bcs, clock)
-    stable_K = unscaled_diffusivityᶜᶜᶜ(i, j, k, grid, nothing,               closure, e, tracers, buoyancy)
+    stable_K = unscaled_diffusivityᶜᶜᶜ(i, j, k, grid, nothing, closure, e, tracers, buoyancy)
     unstable_K = convective_diffusivityᶜᶜᶜ(i, j, k, grid, convective_adjustment, closure, e, velocities, tracers, buoyancy, top_tracer_bcs, clock)
     ijk_unstable = is_unstableᶜᶜᶜ(i, j, k, grid, tracers, buoyancy)
     return ifelse(ijk_unstable, unstable_K, stable_K)
