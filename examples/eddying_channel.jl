@@ -1,11 +1,11 @@
 using Printf, JLD2, Plots
 using Oceananigans
 using Oceananigans.Units: hours, day, days, minutes, kilometers
-using Oceananigans.TurbulenceClosures: TKEBasedVerticalDiffusivity, HorizontallyCurvilinearAnisotropicBiharmonicDiffusivity
+using Oceananigans.TurbulenceClosures: TKEBasedVerticalDiffusivity, HorizontallyCurvilinearAnisotropicBiharmonicDiffusivity, ConvectiveAdjustmentParameters
 
 # ## The grid
 
-Lz = 1000
+Lz = 400
 Nz = 32
 Nh = 48
 ς(k) = ((k - 1) / Nz)^1
@@ -85,10 +85,12 @@ b_bcs = TracerBoundaryConditions(grid, top = FluxBoundaryCondition(1e-8))
 κ₄h = 1e-2 / day * grid.Δx^4 # [m⁴ s⁻¹] horizontal hyperviscosity and hyperdiffusivity
 κ₂h = 1e-4 / day * grid.Δx^2 # [m² s⁻¹] horizontal Laplacian diffusivity
 
-vertical_diffusivity = TKEBasedVerticalDiffusivity()
+convective_adjustment = ConvectiveAdjustmentParameters(Cᴬc = 100.0, Cᴬu = 10.0, Cᴬe = 10.0)
+vertical_diffusivity = TKEBasedVerticalDiffusivity(convective_adjustment=convective_adjustment)
 #horizontal_diffusivity = AnisotropicBiharmonicDiffusivity(νh=κ₄h, κh=κ₄h)
-horizontal_diffusivity = nothing
-#horizontal_diffusivity = AnisotropicDiffusivity(νh=κ₂h, κh=κ₂h)
+
+#horizontal_diffusivity = nothing
+horizontal_diffusivity = AnisotropicDiffusivity(νh=κ₂h, κh=κ₂h, κz=1e-2)
 
 # ## Model instantiation
 #
@@ -96,26 +98,27 @@ horizontal_diffusivity = nothing
 # Runge-Kutta time-stepping scheme, and a `BuoyancyTracer`.
 
 #model = IncompressibleModel(
+#              advection = UpwindBiasedFifthOrder(),
+
 model = HydrostaticFreeSurfaceModel(
            architecture = CPU(),
                    grid = grid,
            #free_surface = ExplicitFreeSurface(gravitational_acceleration=0.1),
-           #free_surface = ImplicitFreeSurface(gravitational_acceleration=9.8),
-#              advection = UpwindBiasedFifthOrder(),
+           free_surface = ImplicitFreeSurface(gravitational_acceleration=9.8),
      momentum_advection = UpwindBiasedFifthOrder(),
        tracer_advection = UpwindBiasedFifthOrder(),
                coriolis = coriolis,
                 tracers = (:b, :e),
                buoyancy = BuoyancyTracer(),
-                closure = (vertical_diffusivity, horizontal_diffusivity),
+                closure = vertical_diffusivity, # horizontal_diffusivity),
     boundary_conditions = (b=b_bcs,)
 )
 
 set!(model, u = uᵢ, b = bᵢ)
 
-Δt = 5minutes
+Δt = 0.1minutes
 
-wizard = TimeStepWizard(cfl=0.2, Δt=Δt, max_change=1.1, max_Δt=5minutes)
+wizard = TimeStepWizard(cfl=0.2, Δt=Δt, max_change=1.1, max_Δt=Δt)
 
 CFL = AdvectiveCFL(wizard)
 
@@ -134,10 +137,12 @@ function progress(sim)
     return nothing
 end
 
-simulation = Simulation(model, Δt = wizard, iteration_interval = 1,
-                                                     #stop_time = 16days,
-                                                     stop_iteration = 100,
-                                                      progress = progress)
+simulation = Simulation(model,
+                        Δt = wizard,
+                        iteration_interval = 10,
+                        #stop_time = 16days,
+                        stop_iteration = 10000,
+                        progress = progress)
 
 # ### Output
 #
@@ -162,11 +167,7 @@ simulation.output_writers[:fields] = JLD2OutputWriter(model, outputs,
                                                          force = true)
 
 
-try
-    run!(simulation)
-catch err
-    display(err)
-end
+run!(simulation)
 
 u, v, w = model.velocities
 
@@ -188,13 +189,16 @@ end
 
 @info "Making an animation from saved data..."
 
-anim = @animate for (i, iter) in enumerate(iterations[1:10:end])
+anim = @animate for (i, iter) in enumerate(iterations)
+
+    @info "Loading frame $i of $(length(iterations))..."
 
     ## Load 3D fields from file
     t = file["timeseries/t/$iter"]
     R_snapshot = file["timeseries/ζ/$iter"] ./ coriolis.f
     δ_snapshot = file["timeseries/δ/$iter"]
     b_snapshot = file["timeseries/b/$iter"]
+    e_snapshot = file["timeseries/e/$iter"]
     u_snapshot = file["timeseries/u/$iter"]
 
     surface_R = R_snapshot[:, :, grid.Nz]
@@ -239,10 +243,11 @@ anim = @animate for (i, iter) in enumerate(iterations[1:10:end])
     # u_xz = contourf(yu, zu, slice_u'; clims=(-ulim, ulim), levels=ulevels, xz_kwargs...)
     # b_xz = contourf(yδ, zδ, slice_b'; clims=(-blim, blim), levels=blevels, xz_kwargs...)
 
-    b_z = plot(zδ, b_snapshot[1, 1, :]) #; clims=(-blim, blim), levels=blevels, xz_kwargs...)
-    u_z = plot(zu, u_snapshot[1, 1, :]) #; clims=(-blim, blim), levels=blevels, xz_kwargs...)
+    b_z = plot(b_snapshot[1, 1, :], zδ, legend=nothing) #; clims=(-blim, blim), levels=blevels, xz_kwargs...)
+    e_z = plot(e_snapshot[1, 1, :], zδ, legend=nothing) #; clims=(-blim, blim), levels=blevels, xz_kwargs...)
+    u_z = plot(u_snapshot[1, 1, :], zu, legend=nothing) #; clims=(-blim, blim), levels=blevels, xz_kwargs...)
 
-    plot(b_z, u_z, layout = (2, 1))
+    plot(b_z, e_z, u_z, layout = (1, 3))
 
     #=
     plot(R_xy, u_xy, u_xz, b_xz,
