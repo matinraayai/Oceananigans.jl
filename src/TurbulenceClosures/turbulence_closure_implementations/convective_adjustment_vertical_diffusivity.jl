@@ -40,7 +40,7 @@ Keyword arguments
 
 * `time_discretization` : Either `ExplicitTimeDiscretization` or `VerticallyImplicitTimeDiscretization`.
 """
-function ConvectiveAdjustmentVerticalDiffusivity(FT=Float64;
+function ConvectiveAdjustmentVerticalDiffusivity(FT = Float64;
                                                  convective_κz = zero(FT),
                                                  convective_νz = zero(FT),
                                                  background_κz = zero(FT),
@@ -66,17 +66,21 @@ function with_tracers(tracers, closure::ConvectiveAdjustmentVerticalDiffusivity{
                                                        closure.background_νz)
 end
 
-
 function DiffusivityFields(arch, grid, tracer_names, bcs, closure::CAVD)
     data = new_data(Bool, arch, grid, (Center, Center, Face))
     stable_buoyancy_gradient = Field(Center, Center, Face, arch, grid, nothing, data)
     return (; stable_buoyancy_gradient)
 end       
 
-function calculate_diffusivities!(diffusivities, arch, grid, closure::CAVD, buoyancy, velocities, tracers)
+function calculate_diffusivities!(diffusivities, closure::CAVD, model)
+
+    arch = model.architecture
+    grid = model.grid
+    tracers = model.tracers
+    buoyancy = model.buoyancy
 
     event = launch!(arch, grid, :xyz,
-                    compute_stability!, diffusivities, grid, tracers, buoyancy,
+                    compute_stability!, diffusivities, grid, buoyancy, tracers,
                     dependencies = device_event(arch))
 
     wait(device(arch), event)
@@ -84,11 +88,11 @@ function calculate_diffusivities!(diffusivities, arch, grid, closure::CAVD, buoy
     return nothing
 end
 
-@inline is_stableᶜᶜᶠ(i, j, k, grid, tracers, buoyancy) = ∂z_b(i, j, k, grid, buoyancy, tracers) > 0
+@inline is_stableᶜᶜᶠ(i, j, k, grid, buoyancy, tracers) = ∂z_b(i, j, k, grid, buoyancy, tracers) > 0
 
-@kernel function compute_stability!(diffusivities, grid, tracers, buoyancy)
+@kernel function compute_stability!(diffusivities, grid, buoyancy, tracers)
     i, j, k, = @index(Global, NTuple)
-    @inbounds  diffusivities.stable_buoyancy_gradient[i, j, k] = is_stableᶜᶜᶠ(i, j, k, grid, tracers, buoyancy)
+    @inbounds  diffusivities.stable_buoyancy_gradient[i, j, k] = is_stableᶜᶜᶠ(i, j, k, grid, buoyancy, tracers)
 end
 
 #####

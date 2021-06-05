@@ -96,17 +96,17 @@ end
 #####
 
 @inline function (bc::ContinuousBoundaryFunction{Nothing, LY, LZ, i})(j, k, grid, clock, model_fields, bc_args...) where {LY, LZ, i}
-    args = user_function_arguments(i, j, k, grid, bc, model_fields, bc.parameters, bc_args...)
+    args = user_function_arguments(i, j, k, grid, bc, model_fields, bc.parameters)
     return bc.func(ynode(LY(), j, grid), znode(LZ(), k, grid), clock.time, args...)
 end
 
 @inline function (bc::ContinuousBoundaryFunction{LX, Nothing, LZ, j})(i, k, grid, clock, model_fields, bc_args...) where {LX, LZ, j}
-    args = user_function_arguments(i, j, k, grid, bc, model_fields, bc.parameters, bc_args...)
+    args = user_function_arguments(i, j, k, grid, bc, model_fields, bc.parameters)
     return bc.func(xnode(LX(), i, grid), znode(LZ(), k, grid), clock.time, args...)
 end
 
 @inline function (bc::ContinuousBoundaryFunction{LX, LY, Nothing, k})(i, j, grid, clock, model_fields, bc_args...) where {LX, LY, k}
-    args = user_function_arguments(i, j, k, grid, bc, model_fields, bc.parameters, bc_args...)
+    args = user_function_arguments(i, j, k, grid, bc, model_fields, bc.parameters)
     return bc.func(xnode(LX(), i, grid), ynode(LY(), j, grid), clock.time, args...)
 end
 
