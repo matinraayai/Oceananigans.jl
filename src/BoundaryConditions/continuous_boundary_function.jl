@@ -84,9 +84,9 @@ function regularize_boundary_condition(bc::BoundaryCondition{C, <:ContinuousBoun
                                                      model_field_names)
 
     regularized_boundary_func = ContinuousBoundaryFunction{LX, LY, LZ, I}(boundary_func.func,
-                                                                       boundary_func.parameters,
-                                                                       boundary_func.field_dependencies,
-                                                                       indices, interps)
+                                                                          boundary_func.parameters,
+                                                                          boundary_func.field_dependencies,
+                                                                          indices, interps)
 
     return BoundaryCondition(C, regularized_boundary_func)
 end
