@@ -13,19 +13,20 @@ function norm_b̃(model)
    return norm(interiorparent(b̃))
 end
 
-   const Ly = 100kilometers
-   const Lz = 3kilometers
+   const Ly = 1000kilometers
+   const Lz = 1.25kilometers
     const D = Lz/2
 const L_jet = Ly/10
-const H_jet = Lz/10 
 
-const f  = 7.3e-5
-const N² = 1e-2      # change to 1e-4
-const U_max = 14.6 
+const θ₀ =  π/32
+Coriolis = NonTraditionalFPlane(latitude=θ₀*180/π)
 
-const νz = 1.27e-2
+const N² = 1e-4      # change to 1e-4
+const U_max = 14.6
 
-grid = RegularRectilinearGrid(size = (128, 128), 
+const νz = 0.26 #1.27e-2
+
+grid = RegularRectilinearGrid(size = (256, 256),
                                  y = (-Ly/2, Ly/2), z=(-Lz, 0),
                           topology = (Flat, Bounded, Bounded),
                               halo = (3, 3))
@@ -34,46 +35,49 @@ B_func(x, y, z, t, N) = N² * (z + D)
                     N = sqrt(N²)
                     B = BackgroundField(B_func, parameters=N)
 
-# Jet Profile:  
-# Bickley x Gaussian [horizontal x vertical] 
-ū(x, y, z) = U_max * sech(y/L_jet)^2 * exp( - (z + D)^2/H_jet^2 )
-b̄(x, y, z) = U_max * tanh(y/L_jet)   * exp( - (z + D)^2/H_jet^2 ) * 2 * f * L_jet / H_jet^2 * (z + D)
+# Jet Profile:
+# Bickley x Gaussian [horizontal x vertical]
+ū(x, y, z) = U_max * sech(y/L_jet)^2
+b̄(x, y, z) = - Coriolis.fy * ū(x, y, z)
 
-perturbation(x, y, z) = randn() * sech(y/L_jet)^2 * exp( - (z + D)^2/H_jet^2 )
+perturbation(x, y, z) = randn() * sech(y/L_jet)^2
           uⁱ(x, y, z) = ū(x, y, z) + 1e-2 * perturbation(x, y, z)
-          bⁱ(x, y, z) = b̄(x, y, z) + 1e-4 * perturbation(x, y, z)
+          bⁱ(x, y, z) = b̄(x, y, z) + 1e-6 * perturbation(x, y, z)
 
-u_forcing_func(x, y, z, t, ν) = 2 * νz / H_jet^2 * ū(x, y, z) * ( 1 - 2/H_jet^2 * (z + D)^2)
-u_forcing = Forcing(u_forcing_func, parameters = νz)
-          
+#u_forcing_func(x, y, z, t, ν) = 2 * νz / H_jet^2 * ū(x, y, z) * ( 1 - 2/H_jet^2 * (z + D)^2)
+#u_forcing = Forcing(u_forcing_func, parameters = νz)
+
 model = IncompressibleModel(
        architecture = CPU(),
                grid = grid,
-          advection = WENO5(),
+#          advection = WENO5(),
         timestepper = :RungeKutta3,
-           coriolis = FPlane(f=f),
+           coriolis = Coriolis,
             tracers = :b,
  background_fields = (b=B,),
            buoyancy = BuoyancyTracer(),
             closure = AnisotropicDiffusivity(νh=0, νz=νz),
-            forcing = (u = u_forcing, ) )
+#            forcing = (u = u_forcing, )
+            )
 
 set!(model, u = uⁱ, b = bⁱ)
 
-u = model.velocities.u 
+u = model.velocities.u
 b = model.tracers.b
 
 ũ = ComputedField(u - ū)
 b̃ = ComputedField(b - b̄)
 
 y, z = ynodes(model.velocities.u), znodes(model.velocities.u)
+yb, zb = ynodes(model.tracers.b), znodes(model.tracers.b)
 
 kwargs = (
-            xlabel= "y (km)", 
-            ylabel= "z (km)", 
-         linewidth= 0, 
+            xlabel= "y (km)",
+            ylabel= "z (km)",
+         linewidth= 0,
+             color=:balance,
           colorbar= true,
-             xlims= (-Ly/2e3, Ly/2e3), 
+             xlims= (-Ly/2e3, Ly/2e3),
              ylims= (-Lz/1e3, 0)
          )
 progress(sim) = @printf("Iteration: %d, time: %s, Δt: %s\n",
@@ -81,8 +85,8 @@ progress(sim) = @printf("Iteration: %d, time: %s, Δt: %s\n",
                         prettytime(sim.model.clock.time),
                         prettytime(sim.Δt))
 
-#wizard = TimeStepWizard(cfl=1.0, Δt=1minutes, max_change=1.1, max_Δt=2minutes)
-simulation = Simulation(model, Δt=10, stop_time=0.5hours,
+#wizard = TimeStepWizard(cfl=1.0, Δt=10minutes, max_change=1.1, max_Δt=2minutes)
+simulation = Simulation(model, Δt=100, stop_time=15days,
                         iteration_interval=60, progress=progress)
 
 simulation.output_writers[:fields] =
@@ -107,7 +111,6 @@ run!(simulation)
 finish_time = time_ns()
 print("Simulation time = ", prettytime(finish_time - start_time), "\n")
 
-#=
 ds = NCDataset(simulation.output_writers[:fields].filepath, "r")
 
 iterations = keys(ds["time"])
@@ -156,11 +159,11 @@ close(ds2)
 
 plt = plot(t, norm_u, label="u", title="Norms")
 plot!(plt, t, norm_b, label="b")
-savefig(plt, "tmp.png")
 
 using Polynomials: fit
 
-I = 9000:10000
+I = 100:120
+#I = 9000:10000
 #I = 100:200
 
 degree = 1
@@ -177,7 +180,7 @@ plt = plot(t/hours, norm_u,
         label = "norm(u)",
        xlabel = "time (hours)",
        ylabel = "norm(u)",
-        title = "norm of perturabation",
+        title = "norm of perturbation",
        legend = :bottomright)
 
 plot!(plt, t[I]/hours, 2 * best_fit[I], # factor 2 offsets fit from curve for better visualization
@@ -185,7 +188,6 @@ plot!(plt, t[I]/hours, 2 * best_fit[I], # factor 2 offsets fit from curve for be
         label = "best fit")
 
 savefig(plt, "growth.png")
-=#
 
 # To-Do
 # 2. Try wizard
