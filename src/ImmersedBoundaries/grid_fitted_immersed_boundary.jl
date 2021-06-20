@@ -16,6 +16,9 @@ GridFittedBoundary(mask; mask_type=nothing) = GridFittedBoundary(mask, mask_type
 
 @inline is_immersed(i, j, k, underlying_grid, ib::GridFittedBoundary) = ib.mask(node(c, c, c, i, j, k, underlying_grid)...)
 @inline is_immersed(i, j, k, underlying_grid, ib::GridFittedBoundary{<:RasterDepthMask}) = ib.mask(i, j)
+# Faceted form experimentation
+@inline is_immersed(i, j, k, facet_number, underlying_grid, ib::GridFittedBoundary) = ib.mask(node(c, c, c, i, j, k, underlying_grid)..., i, j, k, facet_number)
+###
 
 const IBG = ImmersedBoundaryGrid
 
@@ -27,6 +30,9 @@ const f = Face()
 #####
 
 @inline solid_cell(i, j, k, ibg) = is_immersed(i, j, k, ibg.grid, ibg.immersed_boundary)
+# Faceted form experimentation
+@inline solid_cell(i, j, k, facet_number, ibg) = is_immersed(i, j, k, facet_number, ibg.grid, ibg.immersed_boundary)
+###
 
 @inline solid_node(LX, LY, LZ, i, j, k, ibg) = solid_cell(i, j, k, ibg) # fallback (for Center or Nothing LX, LY, LZ)
 
@@ -39,6 +45,22 @@ const f = Face()
 @inline solid_node(LX, ::Face, ::Face, i, j, k, ibg) = solid_node(c, f, c, i, j, k, ibg) || solid_node(c, f, c, i, j, k-1, ibg)
 
 @inline solid_node(::Face, ::Face, ::Face, i, j, k, ibg) = solid_node(c, f, f, i, j, k, ibg) || solid_node(c, f, f, i-1, j, k, ibg)
+
+# Faceted form experimentation
+
+@inline solid_node(LX, LY, LZ, facet_number, i, j, k, ibg) = solid_cell(i, j, k, facet_number, ibg) # fallback (for Center or Nothing LX, LY, LZ)
+
+@inline solid_node(::Face, LX, LY, facet_number, i, j, k, ibg) = solid_cell(i, j, k, facet_number, ibg) || solid_cell(i-1, j, k, facet_number, ibg)
+@inline solid_node(LX, ::Face, LZ, facet_number, i, j, k, ibg) = solid_cell(i, j, k, facet_number, ibg) || solid_cell(i, j-1, k, facet_number, ibg)
+@inline solid_node(LX, LY, ::Face, facet_number, i, j, k, ibg) = solid_cell(i, j, k, facet_number, ibg) || solid_cell(i, j, k-1, facet_number, ibg)
+
+@inline solid_node(::Face, ::Face, LZ, facet_number, i, j, k, ibg) = solid_node(c, f, c, i, j, k, facet_number, ibg) || solid_node(c, f, c, i-1, j, k, facet_number, ibg)
+@inline solid_node(::Face, LY, ::Face, facet_number, i, j, k, ibg) = solid_node(c, c, f, i, j, k, facet_number, ibg) || solid_node(c, c, f, i-1, j, k, facet_number, ibg)
+@inline solid_node(LX, ::Face, ::Face, facet_number, i, j, k, ibg) = solid_node(c, f, c, i, j, k, facet_number, ibg) || solid_node(c, f, c, i, j, k-1, facet_number, ibg)
+
+@inline solid_node(::Face, ::Face, ::Face, facet_number, i, j, k, ibg) = solid_node(c, f, f, i, j, k, facet_number, ibg) || solid_node(c, f, f, i-1, j, k, facet_number, ibg)
+
+###
 
 @inline conditional_flux_ccc(i, j, k, ibg::IBG{FT}, grid, flux, args...) where FT = ifelse(solid_node(c, c, c, i, j, k, ibg), zero(FT), flux(i, j, k, grid, args...))
 @inline conditional_flux_ffc(i, j, k, ibg::IBG{FT}, grid, flux, args...) where FT = ifelse(solid_node(f, f, c, i, j, k, ibg), zero(FT), flux(i, j, k, grid, args...))

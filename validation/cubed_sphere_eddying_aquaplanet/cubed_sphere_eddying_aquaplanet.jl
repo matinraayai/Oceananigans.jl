@@ -7,6 +7,7 @@ using JLD2
 
 using Oceananigans
 using Oceananigans.Units
+using Oceananigans.ImmersedBoundaries: ImmersedBoundaryGrid, GridFittedBoundary
 
 using Dates: now, Second, format
 using Oceananigans.Models.HydrostaticFreeSurfaceModels: VerticalVorticityField
@@ -145,7 +146,24 @@ function cubed_sphere_eddying_aquaplanet(grid_filepath)
     ## Grid setup
 
     H = 100meters
-    grid = ConformalCubedSphereGrid(grid_filepath, Nz=1, z=(-H, 0))
+    underlying_grid = ConformalCubedSphereGrid(grid_filepath, Nz=1, z=(-H, 0))
+    function solid(x, y, z, i, j, k, face_number) 
+     is_solid = false
+     if face_number == 1
+      is_solid = true
+     end
+     return is_solid
+    end
+    # solid(x, y, z, face_number) = false
+ 
+    # Leave this here for closure mess for now - this will be a little wrong, but the fix
+    # looks to me like it needs some face number upgrade. One feature could be a parent
+    # patch rank held with a grid? This could avoid need for an arg? It could potentially
+    # also invovle a depth so that grid patching could be multi-level, but still efficcient?
+    solid(x, y, z) = false
+    grid = underlying_grid
+
+    grid = ImmersedBoundaryGrid(underlying_grid, GridFittedBoundary(solid))
 
     ## "Tradewind-like" zonal wind stress pattern where -π/2 ≤ φ ≤ π/2
     τx(φ) = 0.1 * exp(-10 * (φ - π/3)^2) + 0.1 * exp(-10 * (φ + π/3)^2) - 0.2 * exp(-8φ^2) + 0.19 * exp(-20φ^2)
@@ -160,6 +178,19 @@ function cubed_sphere_eddying_aquaplanet(grid_filepath)
     # Hmmm, I think I messed up the magnitude but the resulting wind stress patterns should do the trick for now. It's a little too strong (stronger than the 0.1 N/m² we expect from τx).
     # I'm further scaling it down by a factor so the wind stress is even weaker (for stability/debugging).
     ψ̃(λ, φ) = - 1e-4 * Ω^2 * R^2 * sin(φ) * (-0.02802495608 * erf(1.054092553 * (π - 3φ)) - 0.06266570687 * erf(2.828427125φ) + 0.03765160933 * erf(4.472135955φ) + 0.02802495608 * erf(1.054092553 * (π + 3φ)))
+
+    # Ocean scaling for typical ∂u/∂t from wind
+    # Hʳᵉᶠ - reference depth (m)
+    # ρʳᵉᶠ - reference denisty (kg m^-3 )
+    # τ_scale_fac - scaling for factors that don't make sense yet
+    # I am not sure this makes sense yet. The BC code is formulated for ms^-1 . m^-2
+    # so something seems a little off?
+    τʳᵉᶠ=0.1
+    Hʳᵉᶠ=4000
+    ρʳᵉᶠ=1000
+    τ_scale_fac=150
+    scale_fac = τʳᵉᶠ/Hʳᵉᶠ/ρʳᵉᶠ*τ_scale_fac
+    ψ̃(λ, φ) = -R*scale_fac*(-0.02802495608 * erf(1.054092553 * (π - 3φ)) - 0.06266570687 * erf(2.828427125φ) + 0.03765160933 * erf(4.472135955φ) + 0.02802495608 * erf(1.054092553 * (π + 3φ)))
 
     λ̃(λ) = (λ + 180)/ 360 * 2π
     φ̃(φ) = φ / 180 * π
@@ -191,8 +222,9 @@ function cubed_sphere_eddying_aquaplanet(grid_filepath)
                        grid = grid,
          momentum_advection = VectorInvariant(),
                free_surface = ExplicitFreeSurface(gravitational_acceleration=0.5),
-                   coriolis = nothing,
-                    closure = HorizontallyCurvilinearAnisotropicDiffusivity(νh=200),
+#                  coriolis = nothing,
+                   coriolis = HydrostaticSphericalCoriolis(scheme=VectorInvariantEnstrophyConserving()),
+                    closure = HorizontallyCurvilinearAnisotropicDiffusivity(νh=5000),
         boundary_conditions = (u=u_bcs, v=v_bcs),
                   # forcing = (u=u_forcing, v=v_forcing),
                     tracers = nothing,
@@ -205,7 +237,7 @@ function cubed_sphere_eddying_aquaplanet(grid_filepath)
 
     ## Simulation setup
 
-    Δt = 10minutes
+    Δt = 40minutes
 
     g = model.free_surface.gravitational_acceleration
     gravity_wave_speed = √(g * H)
@@ -221,7 +253,8 @@ function cubed_sphere_eddying_aquaplanet(grid_filepath)
 
     simulation = Simulation(model,
                         Δt = Δt,
-                 stop_time = 5years,
+##               stop_time = 5years,
+                 stop_time = Δt*100,
         iteration_interval = 20,
                   progress = Progress(time_ns()),
                 parameters = (; cfl)
@@ -244,14 +277,15 @@ include("animate_on_map_projection.jl")
 
 function run_cubed_sphere_eddying_aquaplanet()
 
-    simulation = cubed_sphere_eddying_aquaplanet(datadep"cubed_sphere_96_grid/cubed_sphere_96_grid.jld2")
+    # simulation = cubed_sphere_eddying_aquaplanet(datadep"cubed_sphere_96_grid/cubed_sphere_96_grid.jld2")
+    simulation = cubed_sphere_eddying_aquaplanet(datadep"cubed_sphere_32_grid/cubed_sphere_32_grid.jld2")
 
     projections = [
         ccrs.NearsidePerspective(central_longitude=0, central_latitude=30),
         ccrs.NearsidePerspective(central_longitude=180, central_latitude=-30)
     ]
 
-    animate_eddying_aquaplanet(projections=projections)
+    # animate_eddying_aquaplanet(projections=projections)
 
     return simulation
 end
