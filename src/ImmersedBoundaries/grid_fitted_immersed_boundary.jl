@@ -54,12 +54,11 @@ const f = Face()
 @inline solid_node(LX, ::Face, LZ, facet_number, i, j, k, ibg) = solid_cell(i, j, k, facet_number, ibg) || solid_cell(i, j-1, k, facet_number, ibg)
 @inline solid_node(LX, LY, ::Face, facet_number, i, j, k, ibg) = solid_cell(i, j, k, facet_number, ibg) || solid_cell(i, j, k-1, facet_number, ibg)
 
-@inline solid_node(::Face, ::Face, LZ, facet_number, i, j, k, ibg) = solid_node(c, f, c, i, j, k, facet_number, ibg) || solid_node(c, f, c, i-1, j, k, facet_number, ibg)
-@inline solid_node(::Face, LY, ::Face, facet_number, i, j, k, ibg) = solid_node(c, c, f, i, j, k, facet_number, ibg) || solid_node(c, c, f, i-1, j, k, facet_number, ibg)
-@inline solid_node(LX, ::Face, ::Face, facet_number, i, j, k, ibg) = solid_node(c, f, c, i, j, k, facet_number, ibg) || solid_node(c, f, c, i, j, k-1, facet_number, ibg)
+@inline solid_node(::Face, ::Face, LZ, facet_number, i, j, k, ibg) = solid_node(c, f, c, facet_number, i, j, k, ibg) || solid_node(c, f, c, facet_number, i-1, j, k, ibg)
+@inline solid_node(::Face, LY, ::Face, facet_number, i, j, k, ibg) = solid_node(c, c, f, facet_number, i, j, k, ibg) || solid_node(c, c, f, facet_number, i-1, j, k, ibg)
+@inline solid_node(LX, ::Face, ::Face, facet_number, i, j, k, ibg) = solid_node(c, f, c, facet_number, i, j, k, ibg) || solid_node(c, f, c, facet_number, i, j, k-1, ibg)
 
-@inline solid_node(::Face, ::Face, ::Face, facet_number, i, j, k, ibg) = solid_node(c, f, f, i, j, k, facet_number, ibg) || solid_node(c, f, f, i-1, j, k, facet_number, ibg)
-
+@inline solid_node(::Face, ::Face, ::Face, facet_number, i, j, k, ibg) = solid_node(c, f, f, facet_number, i, j, k, ibg) || solid_node(c, f, f, facet_number, i-1, j, k ibg)
 ###
 
 @inline conditional_flux_ccc(i, j, k, ibg::IBG{FT}, grid, flux, args...) where FT = ifelse(solid_node(c, c, c, i, j, k, ibg), zero(FT), flux(i, j, k, grid, args...))
