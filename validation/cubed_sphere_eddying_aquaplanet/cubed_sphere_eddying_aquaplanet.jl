@@ -147,14 +147,29 @@ function cubed_sphere_eddying_aquaplanet(grid_filepath)
 
     H = 100meters
     underlying_grid = ConformalCubedSphereGrid(grid_filepath, Nz=1, z=(-H, 0))
-    function solid(x, y, z, i, j, k, face_number) 
+
+    ## Read in a depth mask
+    bfile="bathy_cs32.bin"
+    bfile="bathy_Hmin50.bin"
+    depths=reshape(bswap.( reinterpret(Float64, read(bfile,sizeof(Float64)*32*32*6 ) ) ),(32,6,32))
+    dfaces=(
+     depths[:,1,:],
+     depths[:,2,:],
+     depths[:,3,:],
+     depths[:,4,:],
+     depths[:,5,:],
+     depths[:,6,:]
+    )
+    function solid(x, y, z, i, j, k, face_number)
      is_solid = false
-     if face_number == 1
-      is_solid = true
+     ## Need to fix dfaces to be proper cube field with halo
+     if i > 0 && j > 0
+      if dfaces[face_number][i,j] > -H
+        is_solid = true
+      end
      end
      return is_solid
     end
-    # solid(x, y, z, face_number) = false
  
     # Leave this here for closure mess for now - this will be a little wrong, but the fix
     # looks to me like it needs some face number upgrade. One feature could be a parent
