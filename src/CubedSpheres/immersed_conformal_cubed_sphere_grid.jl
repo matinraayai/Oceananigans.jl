@@ -26,8 +26,9 @@ using Oceananigans.Architectures: device_event
 using Oceananigans.Utils: launch!
 import Oceananigans.ImmersedBoundaries: _mask_immersed_field!
 
+# Specialized mask dispatch for Cube sphere that iterates over each patch
+# AND passes "face"number" arg down to masking kernels
 function mask_immersed_field!(field::AbstractField{LX, LY, LZ}, cs_grid::ConformalCubedSphereGrid{FT, NTuple{NT,IG}}) where {LX, LY, LZ, FT, NT, IG<:ImmersedBoundaryGrid}
- println("hello")
  function do_single_patch_masking_of_field!(field, patch_grid, face_number)
    field_patch=get_face(field,face_number)
    return mask_immersed_field!(field_patch, face_number, patch_grid)
