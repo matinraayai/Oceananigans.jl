@@ -8,13 +8,18 @@ function norm_ũ(model)
    return norm(interiorparent(ũ))
 end
 
+function norm_ṽ(model)
+   compute!(ṽ)
+   return norm(interiorparent(ṽ)) 
+end
+
 function norm_b̃(model)
    compute!(b̃)
    return norm(interiorparent(b̃))
 end
 
    const Ly = 1000kilometers
-   const Lz = 1.25kilometers
+   const Lz = 2.5kilometers
     const D = Lz/2
 const L_jet = Ly/10
 
@@ -63,12 +68,15 @@ model = IncompressibleModel(
 set!(model, u = uⁱ, b = bⁱ)
 
 u = model.velocities.u
+v = model.velocities.v
 b = model.tracers.b
 
 ũ = ComputedField(u - ū)
+ṽ = ComputedField(v)
 b̃ = ComputedField(b - b̄)
 
-y, z = ynodes(model.velocities.u), znodes(model.velocities.u)
+y, z   = ynodes(model.velocities.u), znodes(model.velocities.u)
+yv, zv = ynodes(model.velocities.v), znodes(model.velocities.v)
 yb, zb = ynodes(model.tracers.b), znodes(model.tracers.b)
 
 kwargs = (
@@ -86,13 +94,13 @@ progress(sim) = @printf("Iteration: %d, time: %s, Δt: %s\n",
                         prettytime(sim.Δt))
 
 #wizard = TimeStepWizard(cfl=1.0, Δt=10minutes, max_change=1.1, max_Δt=2minutes)
-simulation = Simulation(model, Δt=100, stop_time=15days,
+simulation = Simulation(model, Δt=60, stop_time=1hours, #17days,
                         iteration_interval=60, progress=progress)
 
 simulation.output_writers[:fields] =
    NetCDFOutputWriter(
           model,
-            (u = ũ, b = b̃),
+            (u = ũ, v = ṽ, b = b̃),
       filepath = joinpath(@__DIR__, "inertially_unstable_jet_fields.nc"),
       schedule = IterationInterval(60),
           mode = "c")
@@ -100,10 +108,10 @@ simulation.output_writers[:fields] =
 simulation.output_writers[:norms] =
    NetCDFOutputWriter(
             model,
-         (norm_u = norm_ũ, norm_b = norm_b̃),
+         (norm_u = norm_ũ, norm_v = norm_ṽ, norm_b = norm_b̃),
         filepath = joinpath(@__DIR__, "inertially_unstable_jet_norms.nc"),
         schedule = IterationInterval(1),
-      dimensions = (norm_u=(), norm_b=()),
+      dimensions = (norm_u=(), norm_v=(), norm_b=()),
             mode = "c")
 
 start_time = time_ns()
@@ -122,6 +130,7 @@ anim = @animate for (iter, t) in enumerate(ds["time"])
    @info "Plotting frame $iter from time $t..."
 
    u_snapshot = ds["u"][1, :, :, iter]
+   v_snapshot = ds["v"][1, :, :, iter]
    b_snapshot = ds["b"][1, :, :, iter]
 
 
@@ -132,6 +141,13 @@ anim = @animate for (iter, t) in enumerate(ds["time"])
                      clim=(-u_max, u_max);
                      kwargs...)
 
+   v_max = maximum(abs, v_snapshot)
+   v_plot = contourf(y/1e3, z/1e3, v_snapshot',
+                     title = @sprintf("ṽ at t = %.1f hours", t/hours),
+                     color=:balance,
+                     clim=(-v_max, v_max);
+                     kwargs...)
+
    b_max = maximum(abs, b_snapshot)
    b_plot = contourf(y/1e3, z/1e3, b_snapshot',
                      title = @sprintf("b̃ at t = %.1f hours", t/hours),
@@ -139,7 +155,7 @@ anim = @animate for (iter, t) in enumerate(ds["time"])
                      clim=(-b_max, b_max),
                      kwargs...)
 
-    plt = plot(u_plot, b_plot, layout=(1, 2), size=(1200, 500))
+    plt = plot(u_plot, v_plot, b_plot, layout=(1, 2), size=(1200, 500))
 
 end
 
@@ -153,18 +169,18 @@ iterations = keys(ds2["time"])
 
      t = ds2["time"][:]
 norm_u = ds2["norm_u"][:]
+norm_v = ds2["norm_v"][:]
 norm_b = ds2["norm_b"][:]
 
 close(ds2)
 
-plt = plot(t, norm_u, label="u", title="Norms")
-plot!(plt, t, norm_b, label="b")
+#plt = plot(t, norm_u, label="u", title="Norms")
+#plot!(plt, t, norm_b, label="b")
 
 using Polynomials: fit
 
-I = 100:120
-#I = 9000:10000
-#I = 100:200
+#### change this!!!!
+I = 20000:21000
 
 degree = 1
 linear_fit_polynomial = fit(t[I], log.(norm_u[I]), degree, var = :t)
@@ -175,7 +191,7 @@ best_fit = @. exp(constant + slope * t)
 
 plt = plot(t/hours, norm_u,
         yaxis = :log,
-        #ylims = (2, 500),
+        #ylims = (1, 500),
            lw = 4,
         label = "norm(u)",
        xlabel = "time (hours)",
@@ -193,3 +209,10 @@ savefig(plt, "growth.png")
 # 2. Try wizard
 # 4. Do 2D and 3D simulations on cedar (cpu and then cpu)
 # 5. Try MPI?
+
+
+# To-Do this week
+# 1. Switch sign of U in linear stability to see if we get the same shapes
+# 2. Compute growth rates and compare with theory
+# 3. Try N = 1e-3
+# 4. Try N = 1e-4
