@@ -6,22 +6,17 @@ import Adapt
 Container for boundary conditions.
 """
 struct BoundaryCondition{C<:BCType, T}
+    classification :: C
     condition :: T
 end
 
-"""
-    BoundaryCondition(BC, condition)
-
-Construct a boundary condition of type `BC` with a number or array as a `condition`.
-
-Boundary condition types include `Periodic`, `Flux`, `Value`, `Gradient`, and `NormalFlow`.
-"""
-BoundaryCondition(BC, condition) = BoundaryCondition{BC, typeof(condition)}(condition)
+BoundaryCondition(Classification::DataType, condition) = BoundaryCondition{Classification, typeof(condition)}(Classification(), condition)
 
 """
-    BoundaryCondition(BC, condition::Function; parameters=nothing, discrete_form=false)
+    BoundaryCondition(Classification::DataType, condition::Function; parameters=nothing, discrete_form=false)
 
-Construct a boundary condition of type `BC` with a function boundary `condition`.
+Construct a boundary condition with function boundary `condition` and `Classification`.
+Boundary condition classifications include `Flux`, `Value`, `Gradient`, and `Explicit`.
 
 By default, the function boudnary `condition` is assumed to have the 'continuous form'
 `condition(ξ, η, t)`, where `t` is time and `ξ` and `η` vary along the boundary.
@@ -44,7 +39,7 @@ where `i`, and `j` are indices that vary along the boundary. If `discrete_form=t
 
     `condition(i, j, grid, clock, model_fields, parameters)`.
 """
-function BoundaryCondition(TBC, condition::Function;
+function BoundaryCondition(Classification::DataType, condition::Function;
                            parameters = nothing,
                            discrete_form = false,
                            field_dependencies=())
@@ -58,7 +53,7 @@ function BoundaryCondition(TBC, condition::Function;
         condition = ContinuousBoundaryFunction(condition, parameters, field_dependencies)
     end
 
-    return BoundaryCondition{TBC, typeof(condition)}(condition)
+    return BoundaryCondition{Classification, typeof(condition)}(condition)
 end
 
 bctype(bc::BoundaryCondition{C}) where C = C
