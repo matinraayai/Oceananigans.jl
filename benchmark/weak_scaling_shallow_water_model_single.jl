@@ -17,6 +17,10 @@ MPI.Init()
 local_rank = MPI.Comm_rank(comm)
          R = MPI.Comm_size(comm)
 
+# See: https://github.com/CliMA/ClimateMachine.jl/blob/2def0d653fcef3d069e816844fa4ec5d745c84d1/src/Driver/Driver.jl#L40-L43
+local_comm = MPI.Comm_split_type(comm, MPI.MPI_COMM_TYPE_SHARED, MPI.Comm_rank(comm))
+CUDA.device!(MPI.Comm_rank(local_comm) % length(devices()))
+
 decomposition = ARGS[1]
 Nx = parse(Int, ARGS[2])
 Ny = parse(Int, ARGS[3])
@@ -29,7 +33,7 @@ Ry = parse(Int, ARGS[5])
 
 topo = (Periodic, Periodic, Flat)
 distributed_grid = RegularRectilinearGrid(topology=topo, size=(Nx, Ny), extent=(1, 1))
-arch = MultiCPU(grid=distributed_grid, ranks=(Rx, Ry, 1))
+arch = MultiGPU(grid=distributed_grid, ranks=(Rx, Ry, 1))
 model = DistributedShallowWaterModel(architecture=arch, grid=distributed_grid, gravitational_acceleration=1.0)
 set!(model, h=1.0)
 
