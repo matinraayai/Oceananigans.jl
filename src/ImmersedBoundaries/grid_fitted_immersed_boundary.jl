@@ -56,19 +56,66 @@ const GFIBG = ImmersedBoundaryGrid{FT, TX, TY, TZ, G, <:GridFittedBoundary} wher
 #####
 
 # ccc, ffc, fcf
- @inline _viscous_flux_ux(i, j, k, ibg::GFIBG, args...) = conditional_flux_ccc(i, j, k, ibg, viscous_flux_ux, args...)
  @inline _viscous_flux_uy(i, j, k, ibg::GFIBG, args...) = conditional_flux_ffc(i, j, k, ibg, viscous_flux_uy, args...)
- @inline _viscous_flux_uz(i, j, k, ibg::GFIBG, args...) = conditional_flux_fcf(i, j, k, ibg, viscous_flux_uz, args...)
+
+@inline function _viscous_flux_uz(i, j, k, ibg::GFIBG, closure, clock, velocities, diffusivities, tracers, buoyancy)
+
+    # ------------
+    #      |     |
+    #   o  |  o  |
+    #      |     |
+    # ------------
+    #      |     |
+    #   o  |  o  |  ← i, j, k
+    #      |     |
+    # -----↑------     z
+    #      |     |     ↑ → x
+    #   o  |  o  |
+    #      |     |   
+    # ------------
+    
+    u = velocities.u
+
+    # τ₁₃ calculation assuming no-slip boundary condition:
+    if solid_node(f, c, f, i, j, k, ibg)
+        # Compute surface normal, n
+        # n = +1 => xxxx | -- o -- |
+        # n = +1 => xxxx | -- o -- |
+        
+        if solid_node(f, c, c, i, j, k-1, ibg) # velocity cell _below_ is solid
+            # Assuming that i, j, k is fluid:
+            #      | 
+            # -----↑------ 
+            # xxxxxxxxxxxx 
+            
+            ∂z_u = @inbounds + 2 * u[i, j, k] / Δzᵃᵃᶜ(i, j, k, ibg)
+        else # velocity cell _below_ is fluid
+            # Now we know that i, j, k-1 is fluid:
+            #
+            # xxxxxxxxxxxx 
+            # -----↑------ 
+            #      | 
+            
+            ∂z_u = @inbounds - 2 * u[i, j, k-1] / Δzᵃᵃᶜ(i, j, k-1, ibg)
+        end
+
+        ν = closure.ν
+
+        return - ν * ∂z_u
+    else
+        return viscous_flux_ux(i, j, k, ibg.grid, closure, clock, velocities, diffusivities, tracers, buoyancy)        
+    end
+end
  
  # ffc, ccc, cff
  @inline _viscous_flux_vx(i, j, k, ibg::GFIBG, args...) = conditional_flux_ffc(i, j, k, ibg, viscous_flux_vx, args...)
- @inline _viscous_flux_vy(i, j, k, ibg::GFIBG, args...) = conditional_flux_ccc(i, j, k, ibg, viscous_flux_vy, args...)
+ #@inline _viscous_flux_vy(i, j, k, ibg::GFIBG, args...) = conditional_flux_ccc(i, j, k, ibg, viscous_flux_vy, args...)
  @inline _viscous_flux_vz(i, j, k, ibg::GFIBG, args...) = conditional_flux_cff(i, j, k, ibg, viscous_flux_vz, args...)
  
  # fcf, cff, ccc
  @inline _viscous_flux_wx(i, j, k, ibg::GFIBG, args...) = conditional_flux_fcf(i, j, k, ibg, viscous_flux_wx, args...)
  @inline _viscous_flux_wy(i, j, k, ibg::GFIBG, args...) = conditional_flux_cff(i, j, k, ibg, viscous_flux_wy, args...)
- @inline _viscous_flux_wz(i, j, k, ibg::GFIBG, args...) = conditional_flux_ccc(i, j, k, ibg, viscous_flux_wz, args...)
+ #@inline _viscous_flux_wz(i, j, k, ibg::GFIBG, args...) = conditional_flux_ccc(i, j, k, ibg, viscous_flux_wz, args...)
 
 # fcc, cfc, ccf
 @inline _diffusive_flux_x(i, j, k, ibg::GFIBG, args...) = conditional_flux_fcc(i, j, k, ibg, diffusive_flux_x, args...)
