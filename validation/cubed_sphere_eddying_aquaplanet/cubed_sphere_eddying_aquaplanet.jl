@@ -160,7 +160,7 @@ function cubed_sphere_eddying_aquaplanet(grid_filepath)
      depths[:,5,:],
      depths[:,6,:]
     )
-    function solid(x, y, z, i, j, k, face_number)
+    function solid(x, y, z, i, j, k, face_number, grid)
      is_solid = false
      ## Need to fix dfaces to be proper cube field with halo
      if i > 0 && j > 0
@@ -168,9 +168,42 @@ function cubed_sphere_eddying_aquaplanet(grid_filepath)
         is_solid = true
       end
      end
+     ## println( typeof() )
+
+     ## depths[i,j] > -z 
+
      return is_solid
     end
+
+    csib= (
+            (i,j,z) -> dfaces[1][i,j] > -H,
+            (i,j,z) -> dfaces[2][i,j] > -H,
+            (i,j,z) -> dfaces[3][i,j] > -H,
+            (i,j,z) -> dfaces[4][i,j] > -H,
+            (i,j,z) -> dfaces[5][i,j] > -H,
+            (i,j,z) -> dfaces[6][i,j] > -H
+          )
+    solid6 = (
+               (x,y,z,i,j,k,fnum) -> i > 0 && j > 0 ? csib[1](i,j,z) : false,
+               (x,y,z,i,j,k,fnum) -> i > 0 && j > 0 ? csib[2](i,j,z) : false,
+               (x,y,z,i,j,k,fnum) -> i > 0 && j > 0 ? csib[3](i,j,z) : false,
+               (x,y,z,i,j,k,fnum) -> i > 0 && j > 0 ? csib[4](i,j,z) : false,
+               (x,y,z,i,j,k,fnum) -> i > 0 && j > 0 ? csib[5](i,j,z) : false,
+               (x,y,z,i,j,k,fnum) -> i > 0 && j > 0 ? csib[6](i,j,z) : false
+             )
+
+
+    #=
+    cubed_sphere_immersed_boundary = (GridFittedTopography(depths[:, 1, :]),
+				      GridFittedTopography(depths[:, 2, :]),
+				      GridFittedTopography(depths[:, 3, :]),
+				      GridFittedTopography(depths[:, 4, :]),
+				      GridFittedTopography(depths[:, 5, :]),
+				      GridFittedTopography(depths[:, 6, :]))
  
+    grid = ImmersedBoundaryGrid(underlying_grid, cubed_sphere_immersed_boundary)
+    =#
+
     # Leave this here for closure mess for now - this will be a little wrong, but the fix
     # looks to me like it needs some face number upgrade. One feature could be a parent
     # patch rank held with a grid? This could avoid need for an arg? It could potentially
@@ -178,7 +211,7 @@ function cubed_sphere_eddying_aquaplanet(grid_filepath)
     solid(x, y, z) = false
     grid = underlying_grid
 
-    grid = ImmersedBoundaryGrid(underlying_grid, GridFittedBoundary(solid))
+    grid = ImmersedBoundaryGrid(underlying_grid, GridFittedBoundary(solid6))
 
     ## "Tradewind-like" zonal wind stress pattern where -π/2 ≤ φ ≤ π/2
     τx(φ) = 0.1 * exp(-10 * (φ - π/3)^2) + 0.1 * exp(-10 * (φ + π/3)^2) - 0.2 * exp(-8φ^2) + 0.19 * exp(-20φ^2)
@@ -239,7 +272,8 @@ function cubed_sphere_eddying_aquaplanet(grid_filepath)
                free_surface = ExplicitFreeSurface(gravitational_acceleration=0.5),
 #                  coriolis = nothing,
                    coriolis = HydrostaticSphericalCoriolis(scheme=VectorInvariantEnstrophyConserving()),
-                    closure = HorizontallyCurvilinearAnisotropicDiffusivity(νh=5000),
+#                   closure = HorizontallyCurvilinearAnisotropicDiffusivity(νh=5000),
+                    closure = nothing,
         boundary_conditions = (u=u_bcs, v=v_bcs),
                   # forcing = (u=u_forcing, v=v_forcing),
                     tracers = nothing,
@@ -288,17 +322,17 @@ function cubed_sphere_eddying_aquaplanet(grid_filepath)
     return simulation
 end
 
-include("animate_on_map_projection.jl")
+## include("animate_on_map_projection.jl")
 
 function run_cubed_sphere_eddying_aquaplanet()
 
     # simulation = cubed_sphere_eddying_aquaplanet(datadep"cubed_sphere_96_grid/cubed_sphere_96_grid.jld2")
     simulation = cubed_sphere_eddying_aquaplanet(datadep"cubed_sphere_32_grid/cubed_sphere_32_grid.jld2")
 
-    projections = [
-        ccrs.NearsidePerspective(central_longitude=0, central_latitude=30),
-        ccrs.NearsidePerspective(central_longitude=180, central_latitude=-30)
-    ]
+    ## projections = [
+    ##     ccrs.NearsidePerspective(central_longitude=0, central_latitude=30),
+    ##     ccrs.NearsidePerspective(central_longitude=180, central_latitude=-30)
+    ## ]
 
     # animate_eddying_aquaplanet(projections=projections)
 

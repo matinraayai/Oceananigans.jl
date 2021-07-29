@@ -1,7 +1,7 @@
 import Oceananigans.ImmersedBoundaries: ImmersedBoundaryGrid
 
 function ImmersedBoundaryGrid(grid::ConformalCubedSphereGrid, immersed_boundary)
-    faces = Tuple(ImmersedBoundaryGrid(get_face(grid, i), immersed_boundary) for i = 1:6)
+    faces = Tuple(ImmersedBoundaryGrid(get_face(grid, i), get_face(immersed_boundary, i)) for i = 1:6)
     FT = eltype(grid)
     face_connectivity = grid.face_connectivity
 
