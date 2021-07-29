@@ -1,3 +1,4 @@
+using Statistics
 using Oceananigans.Architectures: AbstractGPUArchitecture
 
 #####
@@ -13,4 +14,15 @@ for function_name in (:sum, :prod, :maximum, :minimum, :all, :any)
         Base.$(function_name!)(f::Function, r::AbstractReducedField, a::AbstractArray; kwargs...) = Base.$(function_name!)(f, interior(r), a; kwargs...)
         Base.$(function_name!)(r::AbstractReducedField, a::AbstractArray; kwargs...) = Base.$(function_name!)(identity, interior(r), a; kwargs...)
     end
+end
+
+function Statistics.norm(a::AbstractField)
+    arch = a.architecture
+    grid = a.grid
+
+    r = zeros(arch, grid, 1)
+    
+    Base.mapreducedim!(x -> x * x, +, r, a)
+
+    return CUDA.@allowscalar sqrt(r[1])
 end

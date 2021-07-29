@@ -51,7 +51,7 @@ Keyword arguments
 - `topology`: A 3-tuple `(Tx, Ty, Tz)` specifying the topology of the domain.
               `Tx`, `Ty`, and `Tz` specify whether the `x`-, `y`-, and `z` directions are
               `Periodic`, `Bounded`, or `Flat`. The topology `Flat` indicates that a model does
-              not vary in that directions so that derivatives and interpolation are zero.
+              not vary in those directions so that derivatives and interpolation are zero.
               The default is `topology=(Periodic, Periodic, Bounded)`.
 
 - `extent`: A tuple prescribing the physical extent of the grid in non-`Flat` directions.
@@ -70,7 +70,7 @@ indicating the left and right endpoints of each dimensions, e.g. `x=(-π, π)` o
 the `extent` argument, e.g. `extent=(Lx, Ly, Lz)` which specifies the extent of each dimension
 in which case 0 ≤ x ≤ Lx, 0 ≤ y ≤ Ly, and -Lz ≤ z ≤ 0.
 
-A grid topology may be specified via a tuple assigning one of `Periodic`, `Bounded, and `Flat`
+A grid topology may be specified via a tuple assigning one of `Periodic`, `Bounded`, and `Flat`
 to each dimension. By default, a horizontally periodic grid topology `(Periodic, Periodic, Bounded)`
 is assumed.
 
@@ -275,9 +275,33 @@ all_z_nodes(::Type{Face},   grid::RegularRectilinearGrid) = grid.zF
 # Get minima of grid
 #
 
-min_Δx(grid::RegularRectilinearGrid) = grid.Δx
-min_Δy(grid::RegularRectilinearGrid) = grid.Δy
-min_Δz(grid::RegularRectilinearGrid) = grid.Δz
+function min_Δx(grid::RegularRectilinearGrid)
+    topo = topology(grid)
+    if topo[1] == Flat
+        return Inf
+    else
+        return grid.Δx
+    end
+end
+
+function min_Δy(grid::RegularRectilinearGrid)
+    topo = topology(grid)
+    if topo[2] == Flat
+        return Inf
+    else
+        return grid.Δy
+    end
+end
+
+
+function min_Δz(grid::RegularRectilinearGrid)
+    topo = topology(grid)
+    if topo[3] == Flat
+        return Inf
+    else
+        return grid.Δz
+    end
+end
 
 # All grid metrics are constants / functions / ranges, so there's no architecture.
 architecture(::RegularRectilinearGrid) = nothing

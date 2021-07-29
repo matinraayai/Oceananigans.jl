@@ -180,14 +180,15 @@ end
 
     for arch in archs
         # Some tests can reuse this same grid and model.
-        topo =(Periodic, Periodic, Bounded)
+        topo = (Periodic, Periodic, Bounded)
         grid = RegularRectilinearGrid(topology=topo, size=(4, 4, 4), extent=(1, 1, 1))
-        model = IncompressibleModel(architecture=arch, grid=grid)
+        model = NonhydrostaticModel(architecture=arch, grid=grid)
 
         @testset "WindowedTimeAverage [$(typeof(arch))]" begin
             @info "  Testing WindowedTimeAverage [$(typeof(arch))]..."
             @test instantiate_windowed_time_average(model)
             @test time_step_with_windowed_time_average(model)
+            @test_throws ArgumentError AveragedTimeInterval(1.0, window=1.1)
         end
     end
 
@@ -198,7 +199,7 @@ end
     for arch in archs
         topo =(Periodic, Periodic, Bounded)
         grid = RegularRectilinearGrid(topology=topo, size=(4, 4, 4), extent=(1, 1, 1))
-        model = IncompressibleModel(architecture=arch, grid=grid)
+        model = NonhydrostaticModel(architecture=arch, grid=grid)
 
         @testset "Dependency adding [$(typeof(arch))]" begin
             @info "    Testing dependency adding [$(typeof(arch))]..."

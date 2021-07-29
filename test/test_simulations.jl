@@ -4,13 +4,12 @@ using Oceananigans.Simulations:
 
 function run_time_step_wizard_tests(arch)
     grid = RegularRectilinearGrid(size=(1, 1, 1), extent=(1, 1, 1))
-    model = IncompressibleModel(architecture=arch, grid=grid)
+    model = NonhydrostaticModel(architecture=arch, grid=grid)
 
     Δx = grid.Δx
     CFL = 0.45
     u₀ = 7
     Δt = 2.5
-
     model.velocities.u[1, 1, 1] = u₀
 
     wizard = TimeStepWizard(cfl=CFL, Δt=Δt, max_change=Inf, min_change=0)
@@ -35,12 +34,31 @@ function run_time_step_wizard_tests(arch)
     update_Δt!(wizard, model)
     @test wizard.Δt ≈ 3.99
 
+    grid_stretched = VerticallyStretchedRectilinearGrid(size = (1, 1, 1),
+                                                        x = (0, 1),
+                                                        y = (0, 1),
+                                                        z_faces = z -> z, 
+                                                        halo = (1, 1, 1),
+                                                        architecture=arch)
+
+    model = NonhydrostaticModel(architecture=arch, grid=grid_stretched)
+
+    Δx = grid_stretched.Δx
+    CFL = 0.45
+    u₀ = 7
+    Δt = 2.5
+    model.velocities.u .= u₀
+
+    wizard = TimeStepWizard(cfl=CFL, Δt=Δt, max_change=Inf, min_change=0)
+    update_Δt!(wizard, model)
+    @test wizard.Δt ≈ CFL * Δx / u₀
+
     return nothing
 end
 
 function run_basic_simulation_tests(arch, Δt)
     grid = RegularRectilinearGrid(size=(1, 1, 1), extent=(1, 1, 1))
-    model = IncompressibleModel(architecture=arch, grid=grid)
+    model = NonhydrostaticModel(architecture=arch, grid=grid)
 
     model.clock.time = 0.0
     model.clock.iteration = 0
@@ -76,14 +94,14 @@ function run_basic_simulation_tests(arch, Δt)
     @test wall_time_limit_exceeded(simulation) == true
 
     # Test that simulation stops at `stop_iteration`.
-    model = IncompressibleModel(architecture=arch, grid=grid)
+    model = NonhydrostaticModel(architecture=arch, grid=grid)
     simulation = Simulation(model, Δt=Δt, stop_iteration=3, iteration_interval=88)
     run!(simulation)
 
     @test simulation.model.clock.iteration == 3
 
     # Test that simulation stops at `stop_time`.
-    model = IncompressibleModel(architecture=arch, grid=grid)
+    model = NonhydrostaticModel(architecture=arch, grid=grid)
     simulation = Simulation(model, Δt=Δt, stop_time=20.20, iteration_interval=123)
     run!(simulation)
 
@@ -96,7 +114,7 @@ function run_simulation_date_tests(arch, start_time, stop_time, Δt)
     grid = RegularRectilinearGrid(size=(1, 1, 1), extent=(1, 1, 1))
 
     clock = Clock(time=start_time)
-    model = IncompressibleModel(architecture=arch, grid=grid, clock=clock)
+    model = NonhydrostaticModel(architecture=arch, grid=grid, clock=clock)
 
     simulation = Simulation(model, Δt=Δt, stop_time=stop_time)
 

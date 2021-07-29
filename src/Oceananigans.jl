@@ -23,10 +23,8 @@ export
 
     # Boundary conditions
     BoundaryCondition,
-    FluxBoundaryCondition, ValueBoundaryCondition, GradientBoundaryCondition, NormalFlowBoundaryCondition,
-    CoordinateBoundaryConditions, FieldBoundaryConditions,
-    UVelocityBoundaryConditions, VVelocityBoundaryConditions, WVelocityBoundaryConditions,
-    TracerBoundaryConditions, PressureBoundaryConditions,
+    FluxBoundaryCondition, ValueBoundaryCondition, GradientBoundaryCondition, OpenBoundaryCondition,
+    FieldBoundaryConditions,
 
     # Fields and field manipulation
     Field, CenterField, XFaceField, YFaceField, ZFaceField,
@@ -58,7 +56,7 @@ export
     LagrangianParticles,
 
     # Models
-    IncompressibleModel, NonDimensionalIncompressibleModel,
+    NonhydrostaticModel,
     HydrostaticFreeSurfaceModel,
     ShallowWaterModel,
     fields,
@@ -72,7 +70,7 @@ export
     Clock, TimeStepWizard, time_step!,
 
     # Simulations
-    Simulation, run!,
+    Simulation, run!, Callback, iteration,
     iteration_limit_exceeded, stop_time_exceeded, wall_time_limit_exceeded,
 
     # Diagnostics
@@ -170,9 +168,9 @@ include("Grids/Grids.jl")
 include("Utils/Utils.jl")
 include("Logger.jl")
 include("Operators/Operators.jl")
-include("Advection/Advection.jl")
 include("BoundaryConditions/BoundaryConditions.jl")
 include("Fields/Fields.jl")
+include("Advection/Advection.jl")
 include("AbstractOperations/AbstractOperations.jl")
 include("Solvers/Solvers.jl")
 

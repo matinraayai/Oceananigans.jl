@@ -85,7 +85,7 @@ when ``N^2 > 0``, and 1 otherwise.
 @inline stability_factor(N²::FT, Σ²::FT, Cb::FT) where FT = min(one(FT), Cb * N² / Σ²)
 
 """
-    νₑ(ς, C, Δᶠ, Σ²)
+    νₑ_deardorff(ς, C, Δᶠ, Σ²)
 
 Return the eddy viscosity for constant Smagorinsky
 given the stability `ς`, model constant `C`,
@@ -188,9 +188,10 @@ Base.show(io::IO, closure::SmagorinskyLilly) =
 #####
 
 function DiffusivityFields(arch, grid, tracer_names, bcs, closure::SmagorinskyLilly)
-    νₑ_bcs = :νₑ ∈ keys(bcs) ? bcs[:νₑ] : DiffusivityBoundaryConditions(grid)
 
-    νₑ = CenterField(arch, grid, νₑ_bcs)
+    default_eddy_viscosity_bcs = (; νₑ = FieldBoundaryConditions(grid, (Center, Center, Center)))
+    bcs = merge(default_eddy_viscosity_bcs, bcs)
+    νₑ = CenterField(arch, grid, bcs.νₑ)
 
     # Use AbstractOperations to write eddy diffusivities in terms of
     # eddy viscosity
@@ -206,6 +207,6 @@ function DiffusivityFields(arch, grid, tracer_names, bcs, closure::SmagorinskyLi
 
     κₑ = NamedTuple{tracer_names}(Tuple(κₑ_ops))
 
-    return (νₑ=νₑ, κₑ=κₑ)
+    return (; νₑ, κₑ)
 end
 

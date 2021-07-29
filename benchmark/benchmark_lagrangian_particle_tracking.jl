@@ -1,3 +1,5 @@
+push!(LOAD_PATH, joinpath(@__DIR__, ".."))
+
 using BenchmarkTools
 using CUDA
 using Oceananigans
@@ -18,7 +20,7 @@ function benchmark_particle_tracking(Arch, N_particles)
         particles = LagrangianParticles(x=x₀, y=y₀, z=z₀)
     end
 
-    model = IncompressibleModel(architecture=Arch(), grid=grid, particles=particles)
+    model = NonhydrostaticModel(architecture=Arch(), grid=grid, particles=particles)
 
     time_step!(model, 1) # warmup
 

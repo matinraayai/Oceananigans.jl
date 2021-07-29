@@ -52,7 +52,7 @@ Keyword arguments
 
 - `topology`: A 3-tuple `(Tx, Ty, Tz)` specifying the topology of the domain.
               `Tz` must be `Bounded` for `VerticallyStretchedRectilinearGrid`.
-              `Tx` and `Ty` specify whether the `x`- and `y`-` directions are
+              `Tx` and `Ty` specify whether the `x`- and `y`- directions are
               `Periodic`, `Bounded`, or `Flat`. The topology `Flat` indicates that a model does
               not vary in that directions so that derivatives and interpolation are zero.
               The default is `topology=(Periodic, Periodic, Bounded)`.
@@ -73,7 +73,7 @@ Keyword arguments
 The physical extent of the domain can be specified via `x` and `y` keyword arguments
 indicating the left and right endpoints of each dimensions, e.g. `x=(-π, π)`.
 
-A grid topology may be specified via a tuple assigning one of `Periodic`, `Bounded, and `Flat`
+A grid topology may be specified via a tuple assigning one of `Periodic`, `Bounded`, and `Flat`
 to each dimension. By default, a horizontally periodic grid topology `(Periodic, Periodic, Bounded)`
 is assumed.
 
@@ -100,6 +100,35 @@ Grid properties
 - `(xᶜᵃᵃ, yᵃᶜᵃ, zᵃᵃᶜ)`: (x, y, z) coordinates of cell centers.
 
 - `(xᶠᵃᵃ, yᵃᶠᵃ, zᵃᵃᶠ)`: (x, y, z) coordinates of cell faces.
+
+Example
+=======
+
+Generate a horizontally-periodic grid with cell interfaces stretched
+hyperbolically near the top:
+
+```jldoctest
+using Oceananigans
+
+σ = 1.1 # stretching factor
+Nz = 24 # vertical resolution
+Lz = 32 # depth (m)
+
+hyperbolically_spaced_faces(k) = - Lz * (1 - tanh(σ * (k - 1) / Nz) / tanh(σ))
+
+grid = VerticallyStretchedRectilinearGrid(size = (32, 32, Nz),
+                                          x = (0, 64),
+                                          y = (0, 64),
+                                          z_faces = hyperbolically_spaced_faces)
+
+# output
+VerticallyStretchedRectilinearGrid{Float64, Periodic, Periodic, Bounded}
+                   domain: x ∈ [0.0, 64.0], y ∈ [0.0, 64.0], z ∈ [-32.0, -0.0]
+                 topology: (Periodic, Periodic, Bounded)
+  resolution (Nx, Ny, Nz): (32, 32, 24)
+   halo size (Hx, Hy, Hz): (1, 1, 1)
+grid spacing (Δx, Δy, Δz): (2.0, 2.0, [min=0.6826950100338962, max=1.8309085743885056])
+```
 """
 function VerticallyStretchedRectilinearGrid(FT = Float64;
                                             architecture = CPU(),
@@ -157,10 +186,6 @@ function VerticallyStretchedRectilinearGrid(FT = Float64;
     Δzᵃᵃᶠ = OffsetArray(Δzᵃᵃᶠ, -Hz)
     Δzᵃᵃᶜ = OffsetArray(Δzᵃᵃᶜ, -Hz)
 
-    # Needed for pressure solver solution to be divergence-free.
-    # Will figure out why later...
-    Δzᵃᵃᶠ[Nz] = Δzᵃᵃᶠ[Nz-1]
-
     # Seems needed to avoid out-of-bounds error in viscous dissipation
     # operators wanting to access Δzᵃᵃᶠ[Nz+2].
     Δzᵃᵃᶠ = OffsetArray(cat(Δzᵃᵃᶠ[0], Δzᵃᵃᶠ..., Δzᵃᵃᶠ[Nz], dims=1), -Hz-1)
@@ -205,12 +230,12 @@ function generate_stretched_vertical_grid(FT, z_topo, Nz, Hz, z_faces)
 
     # Build halo regions
     ΔzF₋ = lower_exterior_Δzᵃᵃᶜ(z_topo, interior_zF, Hz)
-    ΔzF₊ = lower_exterior_Δzᵃᵃᶜ(z_topo, interior_zF, Hz)
+    ΔzF₊ = upper_exterior_Δzᵃᵃᶜ(z_topo, interior_zF, Hz)
 
     z¹, zᴺ⁺¹ = interior_zF[1], interior_zF[Nz+1]
 
     zF₋ = [z¹   - sum(ΔzF₋[k:Hz]) for k = 1:Hz] # locations of faces in lower halo
-    zF₊ = [zᴺ⁺¹ + ΔzF₊[k]         for k = 1:Hz] # locations of faces in width of top halo region
+    zF₊ = reverse([zᴺ⁺¹ + sum(ΔzF₊[k:Hz]) for k = 1:Hz]) # locations of faces in width of top halo region
 
     zF = vcat(zF₋, interior_zF, zF₊)
 
@@ -323,6 +348,29 @@ all_z_nodes(::Type{Face}, grid::VerticallyStretchedRectilinearGrid) = grid.zᵃ�
 # Get minima of grid
 #
 
-min_Δx(grid::VerticallyStretchedRectilinearGrid) = grid.Δx
-min_Δy(grid::VerticallyStretchedRectilinearGrid) = grid.Δy
-min_Δz(grid::VerticallyStretchedRectilinearGrid) = minimum(view(grid.Δzᵃᵃᶜ, 1:grid.Nz))
+function min_Δx(grid::VerticallyStretchedRectilinearGrid)
+    topo = topology(grid)
+    if topo[1] == Flat
+        return Inf
+    else
+        return grid.Δx
+    end
+end
+
+function min_Δy(grid::VerticallyStretchedRectilinearGrid)
+    topo = topology(grid)
+    if topo[2] == Flat
+        return Inf
+    else
+        return grid.Δy
+    end
+end
+
+function min_Δz(grid::VerticallyStretchedRectilinearGrid)
+    topo = topology(grid)
+    if topo[3] == Flat
+        return Inf
+    else
+        return minimum(parent(grid.Δzᵃᵃᶜ))
+    end
+end

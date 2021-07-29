@@ -1,3 +1,5 @@
+push!(LOAD_PATH, joinpath(@__DIR__, ".."))
+
 using BenchmarkTools
 using CUDA
 using Oceananigans
@@ -7,7 +9,7 @@ using Benchmarks
 
 function benchmark_topology(Arch, N, topo)
     grid = RegularRectilinearGrid(topology=topo, size=(N, N, N), extent=(1, 1, 1))
-    model = IncompressibleModel(architecture=Arch(), grid=grid)
+    model = NonhydrostaticModel(architecture=Arch(), grid=grid)
 
     time_step!(model, 1) # warmup
 

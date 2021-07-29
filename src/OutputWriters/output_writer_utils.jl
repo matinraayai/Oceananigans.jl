@@ -1,6 +1,7 @@
 using StructArrays: StructArray, replace_storage
 using Oceananigans.Fields: AbstractField
-using Oceananigans.BoundaryConditions: bctype, CoordinateBoundaryConditions, FieldBoundaryConditions
+using Oceananigans.ImmersedBoundaries: ImmersedBoundaryGrid
+using Oceananigans.BoundaryConditions: bc_str, FieldBoundaryConditions, ContinuousBoundaryFunction
 using Oceananigans.TimeSteppers: QuasiAdamsBashforth2TimeStepper, RungeKutta3TimeStepper
 using Oceananigans.LagrangianParticleTracking: LagrangianParticles
 
@@ -26,17 +27,19 @@ saveproperty!(file, location, p::Tuple) =
 saveproperty!(file, location, p) =
     [saveproperty!(file, location * "/$subp", getproperty(p, subp)) for subp in propertynames(p)]
 
+saveproperty!(file, location, p::ImmersedBoundaryGrid) = saveproperty!(file, location, p.grid)
+
 # Special saveproperty! so boundary conditions are easily readable outside julia.
-function saveproperty!(file, location, cbcs::CoordinateBoundaryConditions)
-    for endpoint in propertynames(cbcs)
-        endpoint_bc = getproperty(cbcs, endpoint)
-        if endpoint_bc.condition isa Function
+function saveproperty!(file, location, bcs::FieldBoundaryConditions)
+    for boundary in propertynames(bcs)
+        bc = getproperty(bcs, endpoint)
+        file[location * "/$endpoint/type"] = bc_str(bc)
+
+        if bc.condition isa Function || bc.condition isa ContinuousBoundaryFunction
             @warn "$field.$coord.$endpoint boundary is of type Function and cannot be saved to disk!"
-            file[location * "/$endpoint/type"] = string(bctype(endpoint_bc))
-            file[location * "/$endpoint/condition"] = missing
+            file[location * "/$boundary/condition"] = missing
         else
-            file[location * "/$endpoint/type"] = string(bctype(endpoint_bc))
-            file[location * "/$endpoint/condition"] = endpoint_bc.condition
+            file[location * "/$boundary/condition"] = bc.condition
         end
     end
 end
@@ -48,6 +51,14 @@ saveproperties!(file, structure, ps) = [saveproperty!(file, "$p", getproperty(st
 serializeproperty!(file, location, p) = (file[location] = p)
 serializeproperty!(file, location, p::AbstractArray) = saveproperty!(file, location, p)
 serializeproperty!(file, location, p::Function) = @warn "Cannot serialize Function property into $location"
+serializeproperty!(file, location, p::ContinuousBoundaryFunction) = @warn "Cannot serialize ContinuousBoundaryFunction property into $location"
+
+function serializeproperty!(file, location, p::ImmersedBoundaryGrid)
+    # Note: when we support array representations of immersed boundaries, we should save those too.
+    @warn "Cannot serialize ImmersedBoundaryGrid; serializing underlying grid instead."
+    file[location] = p.grid
+    return nothing
+end
 
 function serializeproperty!(file, location, p::FieldBoundaryConditions)
     if has_reference(Function, p)

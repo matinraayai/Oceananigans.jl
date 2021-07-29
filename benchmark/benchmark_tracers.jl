@@ -1,3 +1,5 @@
+push!(LOAD_PATH, joinpath(@__DIR__, ".."))
+
 using BenchmarkTools
 using CUDA
 using Oceananigans
@@ -29,7 +31,7 @@ end
 function benchmark_tracers(Arch, N, n_tracers)
     n_active, n_passive = n_tracers
     grid = RegularRectilinearGrid(size=(N, N, N), extent=(1, 1, 1))
-    model = IncompressibleModel(architecture=Arch(), grid=grid, buoyancy=buoyancy(n_active),
+    model = NonhydrostaticModel(architecture=Arch(), grid=grid, buoyancy=buoyancy(n_active),
                                 tracers=tracer_list(n_active, n_passive))
 
     time_step!(model, 1) # warmup
