@@ -184,4 +184,11 @@ end
                             field[i, j, k])
 end
 
+## CNH face number elimination temp step (to go)
+@inline function scalar_mask(i, j, k, grid, ::GridFittedBoundary, LX, LY, LZ, fn, value, field)
+    return @inbounds ifelse(solid_node(LX, LY, LZ, fn, i, j, k, grid),
+                            value,
+                            field[i, j, k])
+end
+
 mask_immersed_velocities!(U, arch, grid::GFIBG) = Tuple(mask_immersed_field!(q) for q in U)
