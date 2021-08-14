@@ -1,4 +1,4 @@
-using Oceananigans.ImmersedBoundaries: ImmersedBoundaryGrid, GridFittedBoundary
+using Oceananigans.ImmersedBoundaries: ImmersedBoundaryGrid, GridFittedBoundary, BathyFileBasedMask
 using Oceananigans.TurbulenceClosures: VerticallyImplicitTimeDiscretization
 
 @testset "Immersed boundaries with hydrostatic free surface models" begin
@@ -7,9 +7,9 @@ using Oceananigans.TurbulenceClosures: VerticallyImplicitTimeDiscretization
     for arch in archs
         underlying_grid = RegularRectilinearGrid(size=(8, 8, 8), x = (-5, 5), y = (-5, 5), z = (0, 2))
 
-        bump(x, y, z) = z < exp(-x^2 - y^2)
+        bump(x, y, z, i, j, k) = z < exp(-x^2 - y^2)
 
-        grid = ImmersedBoundaryGrid(underlying_grid, GridFittedBoundary(bump))
+        grid = ImmersedBoundaryGrid(underlying_grid, GridFittedBoundary(bump, mask_type=BathyFileBasedMask()))
         
         for closure in (IsotropicDiffusivity(ν=1, κ=0.5),
                         IsotropicDiffusivity(ν=1, κ=0.5, time_discretization=VerticallyImplicitTimeDiscretization()))
