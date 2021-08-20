@@ -8,10 +8,12 @@ They use [BenchmarkTools.jl](https://github.com/JuliaCI/BenchmarkTools.jl) to co
 format the benchmark results.
 
 
+
 ## Shallow Water Model
 
 This benchmark tests the performance of the shallow water model run in a doubly periodic domain (`topology = (Periodic, Periodic, Flat)`)
 on a CPU versus a GPU.  We find that with the `WENO5` advection scheme we get a maximum speedup of more than 400 times on a `16384^2` grid.
+
 ```
 Oceananigans v0.58.1
 Julia Version 1.6.0
@@ -80,9 +82,12 @@ The time graph below shows that execution times on GPU are negligebly small up u
 
 ![shallow_water_times](https://user-images.githubusercontent.com/45054739/128793311-e4bbfd5a-aea8-4cdc-bee8-cb71128ff5fe.png)
 
+
+
 ## Nonhydrostatic Model
 
 Similar to to shallow water model, the nonhydrostatic model benchmark tests for its performance on both a CPU and a GPU. It was also benchmarked with the `WENO5` advection scheme. The nonhydrostatic model is 3-dimensional unlike the 2-dimensional shallow water model. Total number of grid points is Ns cubed.
+
 ```
 Oceananigans v0.58.8
 Julia Version 1.6.1
@@ -145,6 +150,8 @@ Like the shallow water model, it can be seen at grid size `64^3` that the GPU is
 For both float types, the benchmarked GPU times of the nonhydrostatic model starts to scale like its CPU times when grid size reaches `128^3`.
 
 ![incompressible_times](https://user-images.githubusercontent.com/45054739/129825253-0d5739d9-f0a7-476e-8152-4ee462b71ad5.png)
+
+
 
 ## Distributed Shallow Water Model
 
@@ -367,6 +374,8 @@ Environment:
 </body>
 </html>
 
+
+
 ## Distributed Nonhydrostatic Model
 
 Similar to the distributed shallow water model benchmark results shown above, the distributed nonhydrostatic model was also benchmarked with the strong and weak scaling methods.
@@ -428,7 +437,6 @@ Environment:
 
 ![ws_nonhydrostatic_efficiency](https://user-images.githubusercontent.com/45054739/130146112-2dd7e24a-7a79-4000-a899-405362af0f2a.png)
 
-
 ### Strong Scaling Nonhydrostatic Model
 
 Strong scaling efficiencies can also be improved for the nonhydrostatic model.
@@ -485,6 +493,7 @@ Environment:
 ```
 
 ![ss_nonhydrostatic_efficiency](https://user-images.githubusercontent.com/45054739/130146219-b354fa25-7d77-4206-8e7e-ec639b2250fa.png)
+
 
 
 ## Multithreading
@@ -583,6 +592,8 @@ Environment:
 └──────┴─────────┴──────────┴────────────┴─────────┴─────────┘
 ```
 
+
+
 ## Tracers
 
 This benchmark tests the performance impacts of running with various amounts of active
@@ -671,6 +682,8 @@ Environment:
 └───────────────┴─────────┴──────────┴─────────┴─────────┘
 ```
 
+
+
 ## Turbulence closures
 
 This benchmark tests the performance impacts of various turbulent diffusivity closures
@@ -725,6 +738,8 @@ Environment:
 └──────────────────────────────────┴─────────┴─────────┴─────────┘
 
 ```
+
+
 
 ## Older Benchmarks
 The following benchmark results are generated from an older version of Oceananigans and with deprecated benchmarking scripts. These legacy benchmark results can still be resonably used as a reference for gauging performance changes across versions of Oceananigans.
