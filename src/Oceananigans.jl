@@ -6,7 +6,7 @@ end
 
 export
     # Architectures
-    CPU, GPU,
+    CPU, GPU, AMD,
 
     # Logging
     OceananigansLogger,
