@@ -94,4 +94,17 @@ Adapt.adapt_structure(::AMD, a::OffsetCPUArray) = OffsetArray(ROCArray(a.parent)
 
 device_event(arch) = Event(device(arch))
 
+# Hacky temporary fix!
+# See: https://github.com/JuliaGPU/KernelAbstractions.jl/pull/257
+#      https://github.com/JuliaGPU/KernelAbstractions.jl/issues/267
+
+import KernelAbstractions: Event
+using ROCKernels: ROCEvent
+
+function Event(::ROCDevice)
+    queue = AMDGPU.get_default_queue()
+    event = AMDGPU.barrier_and!(queue, AMDGPU.active_kernels(queue))
+    MultiEvent(Tuple(ROCEvent(s) for s in event.signals))
+end
+
 end
