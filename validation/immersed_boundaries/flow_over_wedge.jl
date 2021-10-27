@@ -6,8 +6,8 @@ using Oceananigans: fields
 using Oceananigans.Architectures: device
 using KernelAbstractions: MultiEvent
 
-Nz = 64  # Resolution
-κ = 1e-3 # Diffusivity and viscosity (Prandtl = 1)
+Nz = 512 # Resolution
+κ = 1e-6 # Diffusivity and viscosity (Prandtl = 1)
 U = 1
 
 underlying_grid = RegularRectilinearGrid(size = (2Nz, Nz),
@@ -20,7 +20,7 @@ const slope = 1/2
 @inline wedge(x, y) = slope * min(x, -x) + 1
 grid = ImmersedBoundaryGrid(underlying_grid, GridFittedBottom(wedge))
 
-model = NonhydrostaticModel(architecture = CPU(),
+model = NonhydrostaticModel(architecture = GPU(),
                             grid = grid,
                             advection = UpwindBiasedFifthOrder(),
                             closure = IsotropicDiffusivity(ν=κ, κ=κ),
@@ -35,7 +35,8 @@ start_time = [time_ns()]
 
 function x_momentum(u)
     mask_immersed_field!(u, NaN)
-    fluid_u = filter(isfinite, interior(u)[:])
+    u_cpu = Array(interior(u))
+    fluid_u = filter(isfinite, u_cpu[:])
     mask_immersed_field!(u)
     return sum(fluid_u)
 end
@@ -58,13 +59,15 @@ function progress(s)
     return nothing
 end
 
-Δt = 1e-1 * grid.Δx / U
+Δt = 5e-2 * grid.Δx / U
 
-simulation = Simulation(model, Δt = Δt, stop_iteration = 100, progress = progress, iteration_interval = 10)
+simulation = Simulation(model, Δt = Δt, stop_time = 10, progress = progress, iteration_interval = 10)
+
+prefix = "flow_over_wedge_Nz$(Nz)_high_Re"
 
 simulation.output_writers[:fields] = JLD2OutputWriter(model, model.velocities,
-                                                      schedule = IterationInterval(10),
-                                                      prefix = "flow_over_wedge",
+                                                      schedule = TimeInterval(0.1),
+                                                      prefix = prefix,
                                                       field_slicer = nothing,
                                                       force = true)
                         
@@ -75,7 +78,7 @@ run!(simulation)
     Runtime: $(prettytime(simulation.run_time))
 """
 
-filepath = "flow_over_wedge.jld2"
+filepath = prefix *  ".jld2"
 
 ut = FieldTimeSeries(filepath, "u", grid=grid)
 wt = FieldTimeSeries(filepath, "w", grid=grid)
@@ -123,11 +126,11 @@ ax = Axis(fig[2, 1], title="z-velocity")
 hm = heatmap!(ax, wp, colorrange=(-max_w, max_w), colormap=:balance)
 cb = Colorbar(fig[2, 2], hm)
 
-title_gen(n) = @sprintf("Flow over wedge (Δ∫u = %.2e %%) at t = %.2f", 100 * (ΣU - ΣUt[n]) / ΣU, times[n])
+title_gen(n) = @sprintf("Flow over wedge (Δ∫u = %.1f %%) at t = %.2f", 100 * (ΣUt[n] - ΣUi) / ΣUi, times[n])
 title_str = @lift title_gen($n)
 ax_t = fig[0, :] = Label(fig, title_str)
 
-record(fig, "flow_over_wedge.mp4", 1:Nt, framerate=8) do nt
+record(fig, prefix * ".mp4", 1:Nt, framerate=8) do nt
     n[] = nt
 end
 
