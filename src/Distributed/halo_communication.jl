@@ -1,6 +1,7 @@
 using Oceananigans.Fields: AbstractField, AbstractReducedField
 using KernelAbstractions: @kernel, @index, Event, MultiEvent
 using OffsetArrays: OffsetArray
+using Oceananigans.Architectures
 
 import Oceananigans.BoundaryConditions:
     fill_halo_regions!,
@@ -139,13 +140,14 @@ for side in sides
     underlying_side_boundary = Symbol("underlying_$(side)_boundary")
     side_send_tag = Symbol("$(side)_send_tag")
 
+    underlying_west_boundary
     @eval begin
         function $send_side_halo(c, grid, c_location, local_rank, rank_to_send_to)
             send_buffer = $underlying_side_boundary(c, grid, c_location)
             send_tag = $side_send_tag(local_rank, rank_to_send_to)
 
             @debug "Sending " * $side_str * " halo: local_rank=$local_rank, rank_to_send_to=$rank_to_send_to, send_tag=$send_tag"
-            send_req = MPI.Isend(send_buffer, rank_to_send_to, send_tag, MPI.COMM_WORLD)
+            send_req = MPI.Isend(Array(send_buffer), rank_to_send_to, send_tag, MPI.COMM_WORLD)
 
             return send_req
         end
@@ -164,7 +166,7 @@ for side in sides
 
     @eval begin
         function $recv_and_fill_side_halo!(c, grid, c_location, local_rank, rank_to_recv_from)
-            recv_buffer = $underlying_side_halo(c, grid, c_location)
+            recv_buffer = arch_array(CPU(), $underlying_side_halo(c, grid, c_location))
             recv_tag = $side_recv_tag(local_rank, rank_to_recv_from)
 
             @debug "Receiving " * $side_str * " halo: local_rank=$local_rank, rank_to_recv_from=$rank_to_recv_from, recv_tag=$recv_tag"
@@ -174,3 +176,4 @@ for side in sides
         end
     end
 end
+

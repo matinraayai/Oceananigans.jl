@@ -1,3 +1,4 @@
+using CUDA
 using Oceananigans.Architectures
 using Oceananigans.Grids: topology, validate_tupled_argument, with_arch
 
@@ -44,6 +45,10 @@ function MultiArch(child_arch = CPU(); topology = (Periodic, Periodic, Periodic)
     C = typeof(local_connectivity)  
     γ = typeof(communicator)  
     
+    if child_arch == GPU()
+        CUDA.device!(local_rank)
+    end
+
     return MultiArch{A, R, I, ρ, C, γ}(child_arch, local_rank, local_index, ranks, local_connectivity, communicator)
 end
 
