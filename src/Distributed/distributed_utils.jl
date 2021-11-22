@@ -66,24 +66,24 @@ underlying_top_halo(f, arch, grid, location) =
     view(f.parent, :, :, underlying_right_halo_indices(location, topology(grid, 3), grid.Nz, grid.Hz))
 
 underlying_west_halo(f, ::GPU, grid, location) =
-    Array(view(f.parent, underlying_left_halo_indices(location, topology(grid, 1), grid.Nx, grid.Hx), :, :))
+    zeros(eltype(f.parent), grid.Hx, size(f.parent)[2:3]...)
 
 underlying_east_halo(f, ::GPU, grid, location) =
-    Array(view(f.parent, underlying_right_halo_indices(location, topology(grid, 1), grid.Nx, grid.Hx), :, :))
+    zeros(eltype(f.parent), grid.Hx, size(f.parent)[2:3]...)
 
 underlying_south_halo(f, ::GPU, grid, location) =
-    Array(view(f.parent, :, underlying_left_halo_indices(location, topology(grid, 2), grid.Ny, grid.Hy), :))
+    zeros(eltype(f.parent), size(f.parent)[1], grid.Hy, size(f.parent)[3])
 
 underlying_north_halo(f, ::GPU, grid, location) =
-    Array(view(f.parent, :, underlying_right_halo_indices(location, topology(grid, 2), grid.Ny, grid.Hy), :))
+    zeros(eltype(f.parent), size(f.parent)[1], grid.Hy, size(f.parent)[3])
 
 underlying_bottom_halo(f, ::GPU, grid, location) =
-    Array(view(f.parent, :, :, underlying_left_halo_indices(location, topology(grid, 3), grid.Nz, grid.Hz)))
+    zeros(eltype(f.parent), size(f.parent)[1:2]..., grid.Hz)
 
 underlying_top_halo(f, ::GPU, grid, location) =
-    Array(view(f.parent, :, :, underlying_right_halo_indices(location, topology(grid, 3), grid.Nz, grid.Hz)))
+    zeros(eltype(f.parent), size(f.parent)[1:2]..., grid.Hz)
 
-    #####
+#####
 ##### Viewing boundary grid points (used to fill other halos)
 #####
 

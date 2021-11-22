@@ -442,70 +442,70 @@ end
 
     @info "Testing distributed MPI Oceananigans..."
 
-    # @testset "Multi architectures rank connectivity" begin
-    #     @info "  Testing multi architecture rank connectivity..."
-    #     test_triply_periodic_rank_connectivity_with_411_ranks()
-    #     test_triply_periodic_rank_connectivity_with_141_ranks()
-    #     test_triply_periodic_rank_connectivity_with_114_ranks()
-    #     test_triply_periodic_rank_connectivity_with_221_ranks()
-    # end
+    @testset "Multi architectures rank connectivity" begin
+        @info "  Testing multi architecture rank connectivity..."
+        test_triply_periodic_rank_connectivity_with_411_ranks()
+        test_triply_periodic_rank_connectivity_with_141_ranks()
+        test_triply_periodic_rank_connectivity_with_114_ranks()
+        test_triply_periodic_rank_connectivity_with_221_ranks()
+    end
 
-    # @testset "Local grids for distributed models" begin
-    #     @info "  Testing local grids for distributed models..."
-    #     test_triply_periodic_local_grid_with_411_ranks()
-    #     test_triply_periodic_local_grid_with_141_ranks()
-    #     test_triply_periodic_local_grid_with_114_ranks()
-    #     test_triply_periodic_local_grid_with_221_ranks()
-    # end
+    @testset "Local grids for distributed models" begin
+        @info "  Testing local grids for distributed models..."
+        test_triply_periodic_local_grid_with_411_ranks()
+        test_triply_periodic_local_grid_with_141_ranks()
+        test_triply_periodic_local_grid_with_114_ranks()
+        test_triply_periodic_local_grid_with_221_ranks()
+    end
 
-    # @testset "Injection of halo communication BCs" begin
-    #     @info "  Testing injection of halo communication BCs..."
-    #     test_triply_periodic_bc_injection_with_411_ranks()
-    #     test_triply_periodic_bc_injection_with_141_ranks()
-    #     test_triply_periodic_bc_injection_with_114_ranks()
-    #     test_triply_periodic_bc_injection_with_221_ranks()
-    # end
+    @testset "Injection of halo communication BCs" begin
+        @info "  Testing injection of halo communication BCs..."
+        test_triply_periodic_bc_injection_with_411_ranks()
+        test_triply_periodic_bc_injection_with_141_ranks()
+        test_triply_periodic_bc_injection_with_114_ranks()
+        test_triply_periodic_bc_injection_with_221_ranks()
+    end
 
     @testset "Halo communication" begin
         @info "  Testing halo communication..."
-            for H in 1:3
-                test_triply_periodic_halo_communication_with_411_ranks(GPU(), (H, H, H))
-                test_triply_periodic_halo_communication_with_141_ranks(GPU(), (H, H, H))
-                test_triply_periodic_halo_communication_with_114_ranks(GPU(), (H, H, H))
-                test_triply_periodic_halo_communication_with_221_ranks(GPU(), (H, H, H))
-            end
+        for H in 1:3
+            test_triply_periodic_halo_communication_with_411_ranks((H, H, H))
+            test_triply_periodic_halo_communication_with_141_ranks((H, H, H))
+            test_triply_periodic_halo_communication_with_114_ranks((H, H, H))
+            test_triply_periodic_halo_communication_with_221_ranks((H, H, H))
+        end
     end
 
-    # @testset "Time stepping NonhydrostaticModel" begin
-    #     topo = (Periodic, Periodic, Periodic)
-    #     arch = MultiArch(ranks=(1, 4, 1))
-    #     grid = RectilinearGrid(arch, topology=topo, size=(8, 8, 8), extent=(1, 2, 3))
-    #     model = NonhydrostaticModel(grid=grid)
+    @testset "Time stepping NonhydrostaticModel" begin
+        topo = (Periodic, Periodic, Periodic)
+        arch = MultiArch(ranks=(1, 4, 1))
+        grid = RectilinearGrid(arch, topology=topo, size=(8, 8, 8), extent=(1, 2, 3))
+        model = NonhydrostaticModel(grid=grid)
 
-    #     time_step!(model, 1)
-    #     @test model isa NonhydrostaticModel
-    #     @test model.clock.time ≈ 1
+        time_step!(model, 1)
+        @test model isa NonhydrostaticModel
+        @test model.clock.time ≈ 1
 
-    #     simulation = Simulation(model, Δt=1, stop_iteration=2)
-    #     run!(simulation)
-    #     @test model isa NonhydrostaticModel
-    #     @test model.clock.time ≈ 2
-    # end
+        simulation = Simulation(model, Δt=1, stop_iteration=2)
+        run!(simulation)
+        @test model isa NonhydrostaticModel
+        @test model.clock.time ≈ 2
+    end
 
-    # @testset "Time stepping ShallowWaterModel" begin
-    #     topo = (Periodic, Periodic, Flat)
-    #     arch = MultiArch(ranks=(1, 4, 1), topology = topo)
-    #     grid = RectilinearGrid(arch, topology=topo, size=(8, 8), extent=(1, 2), halo=(3, 3))
-    #     model = ShallowWaterModel(advection=nothing, grid=grid, gravitational_acceleration=1)
+    @testset "Time stepping ShallowWaterModel" begin
+        topo = (Periodic, Periodic, Flat)
+        arch = MultiArch(ranks=(1, 4, 1), topology = topo)
+        grid = RectilinearGrid(arch, topology=topo, size=(8, 8), extent=(1, 2), halo=(3, 3))
+        model = ShallowWaterModel(advection=nothing, grid=grid, gravitational_acceleration=1)
 
-    #     set!(model, h=1)
-    #     time_step!(model, 1)
-    #     @test model isa ShallowWaterModel
-    #     @test model.clock.time ≈ 1
+        set!(model, h=1)
+        time_step!(model, 1)
+        @test model isa ShallowWaterModel
+        @test model.clock.time ≈ 1
 
-    #     simulation = Simulation(model, Δt=1, stop_iteration=2)
-    #     run!(simulation)
-    #     @test model isa ShallowWaterModel
-    #     @test model.clock.time ≈ 2
-    # end
+        simulation = Simulation(model, Δt=1, stop_iteration=2)
+        run!(simulation)
+        @test model isa ShallowWaterModel
+        @test model.clock.time ≈ 2
+    end
 end
