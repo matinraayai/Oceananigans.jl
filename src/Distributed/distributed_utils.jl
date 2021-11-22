@@ -1,3 +1,4 @@
+using Oceananigans.Architectures: CPU, GPU
 using Oceananigans.Fields: AbstractField
 using Oceananigans.Grids:
     interior_indices,
@@ -46,25 +47,43 @@ top_halo(f::AbstractField{LX, LY, LZ}; include_corners=true) where {LX, LY, LZ} 
                                    interior_indices(LY, topology(f, 2), f.grid.Ny),
                                    right_halo_indices(LZ, topology(f, 3), f.grid.Nz, f.grid.Hz))
 
-underlying_west_halo(f, grid, location) =
+underlying_west_halo(f, arch, grid, location) =
     view(f.parent, underlying_left_halo_indices(location, topology(grid, 1), grid.Nx, grid.Hx), :, :)
 
-underlying_east_halo(f, grid, location) =
+underlying_east_halo(f, arch, grid, location) =
     view(f.parent, underlying_right_halo_indices(location, topology(grid, 1), grid.Nx, grid.Hx), :, :)
 
-underlying_south_halo(f, grid, location) =
+underlying_south_halo(f, arch, grid, location) =
     view(f.parent, :, underlying_left_halo_indices(location, topology(grid, 2), grid.Ny, grid.Hy), :)
 
-underlying_north_halo(f, grid, location) =
+underlying_north_halo(f, arch, grid, location) =
     view(f.parent, :, underlying_right_halo_indices(location, topology(grid, 2), grid.Ny, grid.Hy), :)
 
-underlying_bottom_halo(f, grid, location) =
+underlying_bottom_halo(f, arch, grid, location) =
     view(f.parent, :, :, underlying_left_halo_indices(location, topology(grid, 3), grid.Nz, grid.Hz))
 
-underlying_top_halo(f, grid, location) =
+underlying_top_halo(f, arch, grid, location) =
     view(f.parent, :, :, underlying_right_halo_indices(location, topology(grid, 3), grid.Nz, grid.Hz))
 
-#####
+underlying_west_halo(f, ::GPU, grid, location) =
+    Array(view(f.parent, underlying_left_halo_indices(location, topology(grid, 1), grid.Nx, grid.Hx), :, :))
+
+underlying_east_halo(f, ::GPU, grid, location) =
+    Array(view(f.parent, underlying_right_halo_indices(location, topology(grid, 1), grid.Nx, grid.Hx), :, :))
+
+underlying_south_halo(f, ::GPU, grid, location) =
+    Array(view(f.parent, :, underlying_left_halo_indices(location, topology(grid, 2), grid.Ny, grid.Hy), :))
+
+underlying_north_halo(f, ::GPU, grid, location) =
+    Array(view(f.parent, :, underlying_right_halo_indices(location, topology(grid, 2), grid.Ny, grid.Hy), :))
+
+underlying_bottom_halo(f, ::GPU, grid, location) =
+    Array(view(f.parent, :, :, underlying_left_halo_indices(location, topology(grid, 3), grid.Nz, grid.Hz)))
+
+underlying_top_halo(f, ::GPU, grid, location) =
+    Array(view(f.parent, :, :, underlying_right_halo_indices(location, topology(grid, 3), grid.Nz, grid.Hz)))
+
+    #####
 ##### Viewing boundary grid points (used to fill other halos)
 #####
 
@@ -80,20 +99,48 @@ underlying_left_boundary_indices(::Type{Nothing}, topo, N, H) = 1:0 # empty
 underlying_right_boundary_indices(loc, topo, N, H) = N+1:N+H
 underlying_right_boundary_indices(::Type{Nothing}, topo, N, H) = 1:0 # empty
 
-underlying_west_boundary(f, grid, location) =
+underlying_west_boundary(f, arch, grid, location) =
     view(f.parent, underlying_left_boundary_indices(location, topology(grid, 1), grid.Nx, grid.Hx), :, :)
 
-underlying_east_boundary(f, grid, location) =
+underlying_east_boundary(f, arch, grid, location) =
     view(f.parent, underlying_right_boundary_indices(location, topology(grid, 1), grid.Nx, grid.Hx), :, :)
 
-underlying_south_boundary(f, grid, location) =
+underlying_south_boundary(f, arch, grid, location) =
     view(f.parent, :, underlying_left_boundary_indices(location, topology(grid, 2), grid.Ny, grid.Hy), :)
 
-underlying_north_boundary(f, grid, location) =
+underlying_north_boundary(f, arch, grid, location) =
     view(f.parent, :, underlying_right_boundary_indices(location, topology(grid, 2), grid.Ny, grid.Hy), :)
 
-underlying_bottom_boundary(f, grid, location) =
+underlying_bottom_boundary(f, arch, grid, location) =
     view(f.parent, :, :, underlying_left_boundary_indices(location, topology(grid, 3), grid.Nz, grid.Hz))
 
-underlying_top_boundary(f, grid, location) =
+underlying_top_boundary(f, arch, grid, location) =
     view(f.parent, :, :, underlying_right_boundary_indices(location, topology(grid, 3), grid.Nz, grid.Hz))
+
+underlying_west_boundary(f, ::GPU, grid, location) =
+    Array(view(f.parent, underlying_left_boundary_indices(location, topology(grid, 1), grid.Nx, grid.Hx), :, :))
+
+underlying_east_boundary(f, ::GPU, grid, location) =
+    Array(view(f.parent, underlying_right_boundary_indices(location, topology(grid, 1), grid.Nx, grid.Hx), :, :))
+
+underlying_south_boundary(f, ::GPU, grid, location) =
+    Array(view(f.parent, :, underlying_left_boundary_indices(location, topology(grid, 2), grid.Ny, grid.Hy), :))
+
+underlying_north_boundary(f, ::GPU, grid, location) =
+    Array(view(f.parent, :, underlying_right_boundary_indices(location, topology(grid, 2), grid.Ny, grid.Hy), :))
+
+underlying_bottom_boundary(f, ::GPU, grid, location) =
+    Array(view(f.parent, :, :, underlying_left_boundary_indices(location, topology(grid, 3), grid.Nz, grid.Hz)))
+
+underlying_top_boundary(f, ::GPU, grid, location) =
+    Array(view(f.parent, :, :, underlying_right_boundary_indices(location, topology(grid, 3), grid.Nz, grid.Hz)))
+
+@inline underlying_west_halo_indices(grid, location)   = (underlying_left_halo_indices(location, topology(grid, 1),  grid.Nx, grid.Hx), :, :)
+@inline underlying_east_halo_indices(grid, location)   = (underlying_right_halo_indices(location, topology(grid, 1), grid.Nx, grid.Hx), :, :)
+@inline underlying_south_halo_indices(grid, location)  = (:, underlying_left_halo_indices(location, topology(grid, 2),  grid.Ny, grid.Hy), :)
+@inline underlying_north_halo_indices(grid, location)  = (:, underlying_right_halo_indices(location, topology(grid, 2), grid.Ny, grid.Hy), :)
+@inline underlying_bottom_halo_indices(grid, location) = ( :, :, underlying_left_halo_indices(location, topology(grid, 3),  grid.Nz, grid.Hz))
+@inline underlying_top_halo_indices(grid, location)    = ( :, :, underlying_right_halo_indices(location, topology(grid, 3), grid.Nz, grid.Hz))
+
+
+

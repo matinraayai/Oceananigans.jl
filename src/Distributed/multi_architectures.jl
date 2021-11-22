@@ -45,7 +45,10 @@ function MultiArch(child_arch = CPU(); topology = (Periodic, Periodic, Periodic)
     C = typeof(local_connectivity)  
     γ = typeof(communicator)  
     
+    #changing device to account for different GPUs
+    
     if child_arch == GPU()
+        length(CUDA.devices()) >= total_ranks || error("Not enough GPUs per ranks called")
         CUDA.device!(local_rank)
     end
 
@@ -56,7 +59,9 @@ child_architecture(arch::MultiArch) = arch.child_arch
 child_architecture(::CPU) = CPU()
 child_architecture(::GPU) = GPU()
 
-# Extending architecture specific methods
+#####
+##### Extending architecture specific methods
+#####
 
 device(arch::AbstractMultiArchitecture)        = device(child_architecture(arch))
 device_event(arch::AbstractMultiArchitecture)  = device_event(child_architecture(arch))

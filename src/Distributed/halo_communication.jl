@@ -65,9 +65,9 @@ function fill_halo_regions!(c::OffsetArray, bcs, arch::AbstractMultiArchitecture
 
     barrier = Event(device(child_architecture(arch)))
 
-    x_events_requests = fill_west_and_east_halos!(c, bcs.west, bcs.east, arch, barrier, grid, c_location, args...)
-    y_events_requests = fill_south_and_north_halos!(c, bcs.south, bcs.north, arch, barrier, grid, c_location, args...)
-    z_events_requests = fill_bottom_and_top_halos!(c, bcs.bottom, bcs.top, arch, barrier, grid, c_location, args...)
+    x_events_requests = fill_west_and_east_halos!(c, bcs.west, bcs.east, child_architecture(arch), barrier, grid, c_location, args...)
+    y_events_requests = fill_south_and_north_halos!(c, bcs.south, bcs.north, child_architecture(arch), barrier, grid, c_location, args...)
+    z_events_requests = fill_bottom_and_top_halos!(c, bcs.bottom, bcs.top, child_architecture(arch), barrier, grid, c_location, args...)
 
     events_and_requests = [x_events_requests..., y_events_requests..., z_events_requests...]
 
@@ -94,8 +94,8 @@ for (side, opposite_side) in zip([:west, :south, :bottom], [:east, :north, :top]
 
     @eval begin
         function $fill_both_halos!(c, bc_side, bc_opposite_side, arch, barrier, grid, args...)
-            event_side = $fill_side_halo!(c, bc_side, child_architecture(arch), barrier, grid, args...)
-            event_opposite_side = $fill_opposite_side_halo!(c, bc_opposite_side, child_architecture(arch), barrier, grid, args...)
+            event_side = $fill_side_halo!(c, bc_side, arch, barrier, grid, args...)
+            event_opposite_side = $fill_opposite_side_halo!(c, bc_opposite_side, arch, barrier, grid, args...)
             return event_side, event_opposite_side
         end
     end
@@ -113,19 +113,34 @@ for (side, opposite_side) in zip([:west, :south, :bottom], [:east, :north, :top]
     send_opposite_side_halo = Symbol("send_$(opposite_side)_halo")
     recv_and_fill_side_halo! = Symbol("recv_and_fill_$(side)_halo!")
     recv_and_fill_opposite_side_halo! = Symbol("recv_and_fill_$(opposite_side)_halo!")
+    underlying_side_halo = Symbol("underlying_$(side)_halo")
+    underlying_opposite_side_halo = Symbol("underlying_$(opposite_side)_halo")
+    underlying_side_halo_indices = Symbol("underlying_$(side)_halo_indices")
+    underlying_opposite_side_halo_indices = Symbol("underlying_$(opposite_side)_halo_indices")
 
     @eval begin
         function $fill_both_halos!(c, bc_side::HaloCommunicationBC, bc_opposite_side::HaloCommunicationBC, arch, barrier, grid, c_location, args...)
             @assert bc_side.condition.from == bc_opposite_side.condition.from  # Extra protection in case of bugs
             local_rank = bc_side.condition.from
 
-            send_req1 = $send_side_halo(c, grid, c_location, local_rank, bc_side.condition.to)
-            send_req2 = $send_opposite_side_halo(c, grid, c_location, local_rank, bc_opposite_side.condition.to)
+            recv_buf1 = $underlying_side_halo(c, arch, grid, c_location)
+            recv_buf2 = $underlying_opposite_side_halo(c, arch, grid, c_location)
+            
+            recv_req1 = $recv_and_fill_side_halo!(recv_buf1, arch, grid, c_location, local_rank, bc_side.condition.to)
+            recv_req2 = $recv_and_fill_opposite_side_halo!(recv_buf2, arch, grid, c_location, local_rank, bc_opposite_side.condition.to)
 
-            recv_req1 = $recv_and_fill_side_halo!(c, grid, c_location, local_rank, bc_side.condition.to)
-            recv_req2 = $recv_and_fill_opposite_side_halo!(c, grid, c_location, local_rank, bc_opposite_side.condition.to)
+            send_req1 = $send_side_halo(c, arch, grid, c_location, local_rank, bc_side.condition.to)
+            send_req2 = $send_opposite_side_halo(c, arch, grid, c_location, local_rank, bc_opposite_side.condition.to)
 
-            return send_req1, send_req2, recv_req1, recv_req2
+            if arch isa GPU 
+                MPI.Waitall!([recv_req1, recv_req2, send_req1, send_req2])
+
+                c.parent[$underlying_side_halo_indices(grid, c_location)...] = recv_buf1
+                c.parent[$underlying_opposite_side_halo_indices(grid, c_location)...] = recv_buf2
+
+                return (nothing, nothing, nothing, nothing)
+            end
+            return recv_req1, recv_req2, send_req1, send_req2
         end
     end
 end
@@ -142,12 +157,12 @@ for side in sides
 
     underlying_west_boundary
     @eval begin
-        function $send_side_halo(c, grid, c_location, local_rank, rank_to_send_to)
-            send_buffer = $underlying_side_boundary(c, grid, c_location)
+        function $send_side_halo(c, arch, grid, c_location, local_rank, rank_to_send_to)
+            send_buffer = $underlying_side_boundary(c, arch, grid, c_location)
             send_tag = $side_send_tag(local_rank, rank_to_send_to)
 
             @debug "Sending " * $side_str * " halo: local_rank=$local_rank, rank_to_send_to=$rank_to_send_to, send_tag=$send_tag"
-            send_req = MPI.Isend(Array(send_buffer), rank_to_send_to, send_tag, MPI.COMM_WORLD)
+            send_req = MPI.Isend(send_buffer, rank_to_send_to, send_tag, MPI.COMM_WORLD)
 
             return send_req
         end
@@ -155,18 +170,16 @@ for side in sides
 end
 
 #####
-##### Receiving and filling halos (buffer is a view so it gets filled upon receive)
+##### Receiving and filling halos (in case of CPU buffer is a view so it gets filled upon receive)
 #####
 
 for side in sides
     side_str = string(side)
     recv_and_fill_side_halo! = Symbol("recv_and_fill_$(side)_halo!")
-    underlying_side_halo = Symbol("underlying_$(side)_halo")
     side_recv_tag = Symbol("$(side)_recv_tag")
 
     @eval begin
-        function $recv_and_fill_side_halo!(c, grid, c_location, local_rank, rank_to_recv_from)
-            recv_buffer = arch_array(CPU(), $underlying_side_halo(c, grid, c_location))
+        function $recv_and_fill_side_halo!(recv_buffer, arch, grid, c_location, local_rank, rank_to_recv_from)
             recv_tag = $side_recv_tag(local_rank, rank_to_recv_from)
 
             @debug "Receiving " * $side_str * " halo: local_rank=$local_rank, rank_to_recv_from=$rank_to_recv_from, recv_tag=$recv_tag"
@@ -176,4 +189,3 @@ for side in sides
         end
     end
 end
-
