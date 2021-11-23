@@ -138,7 +138,7 @@ for (side, opposite_side) in zip([:west, :south, :bottom], [:east, :north, :top]
                 c.parent[$underlying_side_halo_indices(grid, c_location)...] = recv_buf1
                 c.parent[$underlying_opposite_side_halo_indices(grid, c_location)...] = recv_buf2
 
-                return (nothing, nothing, nothing, nothing)
+                return nothing, nothing, nothing, nothing
             end
             return recv_req1, recv_req2, send_req1, send_req2
         end
@@ -155,7 +155,6 @@ for side in sides
     underlying_side_boundary = Symbol("underlying_$(side)_boundary")
     side_send_tag = Symbol("$(side)_send_tag")
 
-    underlying_west_boundary
     @eval begin
         function $send_side_halo(c, arch, grid, c_location, local_rank, rank_to_send_to)
             send_buffer = $underlying_side_boundary(c, arch, grid, c_location)

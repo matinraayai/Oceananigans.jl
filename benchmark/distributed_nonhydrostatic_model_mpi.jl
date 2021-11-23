@@ -21,7 +21,7 @@ local_rank = MPI.Comm_rank(comm)
  #assigns one GPU per rank, could increase efficiency but must have enough GPUs
  #CUDA.device!(local_rank)
 
- Nx = Ny = 256; Nz = 32
+ Nx = Ny = 1024; Nz = 32
  Rx = Rz = 1
  Ry = R
 
