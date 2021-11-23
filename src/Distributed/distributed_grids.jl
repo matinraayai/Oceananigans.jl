@@ -69,7 +69,7 @@ function RectilinearGrid(arch::MultiArch, FT = Float64;
 
     architecture = MultiArch(child_architecture(arch), topology = topology, ranks = arch.ranks, communicator = arch.communicator)
 
-    Arch = typeof(arch) 
+    Arch = typeof(architecture) 
 
     return RectilinearGrid{FT, TX, TY, TZ, FX, FY, FZ, VX, VY, VZ, Arch}(architecture,
         nx, ny, nz, hx, hy, hz, Lx, Ly, Lz, Δxᶠᵃᵃ, Δxᶜᵃᵃ, xᶠᵃᵃ, xᶜᵃᵃ, Δyᵃᶜᵃ, Δyᵃᶠᵃ, yᵃᶠᵃ, yᵃᶜᵃ, Δzᵃᵃᶠ, Δzᵃᵃᶜ, zᵃᵃᶠ, zᵃᵃᶜ)

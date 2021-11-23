@@ -188,3 +188,30 @@ for side in sides
         end
     end
 end
+
+for (side, opposite_side) in zip([:west, :south, :bottom], [:east, :north, :top])
+    fill_side_halo! = Symbol("fill_$(side)_halo!")
+    send_side_halo  = Symbol("send_$(side)_halo")
+    recv_and_fill_side_halo! = Symbol("recv_and_fill_$(side)_halo!")
+    underlying_side_halo = Symbol("underlying_$(side)_halo")
+    underlying_side_halo_indices = Symbol("underlying_$(side)_halo_indices")
+
+    @eval begin
+        function $fill_side_halo!(c, bc_side::HaloCommunicationBC, arch, barrier, grid, c_location, args...)
+            local_rank = bc_side.condition.from
+
+            recv_buf1 = $underlying_side_halo(c, arch, grid, c_location)
+            recv_req1 = $recv_and_fill_side_halo!(recv_buf1, arch, grid, c_location, local_rank, bc_side.condition.to)
+            send_req1 = $send_side_halo(c, arch, grid, c_location, local_rank, bc_side.condition.to)
+
+            if arch isa GPU 
+                MPI.Waitall!([recv_req1, send_req1])
+
+                c.parent[$underlying_side_halo_indices(grid, c_location)...] = recv_buf1
+ 
+                return nothing, nothing
+            end
+            return recv_req1, send_req1
+        end
+    end
+end

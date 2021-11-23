@@ -57,4 +57,5 @@ end
     @info "  Testing distributed FFT-based Poisson solver..."
     @test divergence_free_poisson_solution_triply_periodic((16, 16, 1), (1, 4, 1))
     @test divergence_free_poisson_solution_triply_periodic((44, 44, 1), (1, 4, 1))
+    @test divergence_free_poisson_solution_triply_periodic((16, 32, 1), (1, 4, 1))
 end
