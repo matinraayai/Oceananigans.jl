@@ -118,22 +118,22 @@ underlying_top_boundary(f, arch, grid, location) =
     view(f.parent, :, :, underlying_right_boundary_indices(location, topology(grid, 3), grid.Nz, grid.Hz))
 
 underlying_west_boundary(f, ::GPU, grid, location) =
-    Array(view(f.parent, underlying_left_boundary_indices(location, topology(grid, 1), grid.Nx, grid.Hx), :, :))
+    Array(f.parent[underlying_left_boundary_indices(location, topology(grid, 1), grid.Nx, grid.Hx), :, :])
 
 underlying_east_boundary(f, ::GPU, grid, location) =
-    Array(view(f.parent, underlying_right_boundary_indices(location, topology(grid, 1), grid.Nx, grid.Hx), :, :))
+    Array(f.parent[underlying_right_boundary_indices(location, topology(grid, 1), grid.Nx, grid.Hx), :, :])
 
 underlying_south_boundary(f, ::GPU, grid, location) =
-    Array(view(f.parent, :, underlying_left_boundary_indices(location, topology(grid, 2), grid.Ny, grid.Hy), :))
+    Array(f.parent[:, underlying_left_boundary_indices(location, topology(grid, 2), grid.Ny, grid.Hy), :])
 
 underlying_north_boundary(f, ::GPU, grid, location) =
-    Array(view(f.parent, :, underlying_right_boundary_indices(location, topology(grid, 2), grid.Ny, grid.Hy), :))
+    Array(f.parent[:, underlying_right_boundary_indices(location, topology(grid, 2), grid.Ny, grid.Hy), :])
 
 underlying_bottom_boundary(f, ::GPU, grid, location) =
-    Array(view(f.parent, :, :, underlying_left_boundary_indices(location, topology(grid, 3), grid.Nz, grid.Hz)))
+    Array(f.parent[:, :, underlying_left_boundary_indices(location, topology(grid, 3), grid.Nz, grid.Hz)])
 
 underlying_top_boundary(f, ::GPU, grid, location) =
-    Array(view(f.parent, :, :, underlying_right_boundary_indices(location, topology(grid, 3), grid.Nz, grid.Hz)))
+    Array(f.parent[:, :, underlying_right_boundary_indices(location, topology(grid, 3), grid.Nz, grid.Hz)])
 
 @inline underlying_west_halo_indices(grid, location)   = (underlying_left_halo_indices(location, topology(grid, 1),  grid.Nx, grid.Hx), :, :)
 @inline underlying_east_halo_indices(grid, location)   = (underlying_right_halo_indices(location, topology(grid, 1), grid.Nx, grid.Hx), :, :)
