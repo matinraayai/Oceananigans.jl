@@ -132,9 +132,8 @@ for (side, opposite_side) in zip([:west, :south, :bottom], [:east, :north, :top]
             send_req1 = $send_side_halo(c, arch, grid, c_location, local_rank, bc_side.condition.to)
             send_req2 = $send_opposite_side_halo(c, arch, grid, c_location, local_rank, bc_opposite_side.condition.to)
 
-            fill_buffer!(arch, c, recv_buf1, recv_req1, send_req1, grid, c_location, $side_halo_indices)
-            fill_buffer!(arch, c, recv_buf2, recv_req2, send_req2, grid, c_location, $opposite_side_halo_indices)
-
+            fill_buffers!(arch, c, recv_buf1, recv_buf2, recv_req1, recv_req2, send_req1, send_req2, grid, c_location, $side_halo_indices, $opposite_side_halo_indices)
+            
             return recv_req1, recv_req2, send_req1, send_req2
         end
     end
@@ -206,8 +205,15 @@ for side in sides
 end
 
 @inline fill_buffer!(::CPU, args...) = nothing
+@inline fill_buffers!(::CPU, args...) = nothing
 
 function fill_buffer!(::GPU, c, buf, rreq, sreq, grid, loc, idx) 
     MPI.Waitall!([rreq, sreq])
-    c.parent[idx(grid, loc)...] = buf
+    c.parent[idx(grid, loc)...] = CuArray(buf)
+end
+
+function fill_buffers!(::GPU, c, buf1, buf2, rreq1, rreq2, sreq1, sreq2, grid, loc, idx1, idx2) 
+    MPI.Waitall!([rreq1, rreq2, sreq1, sreq2])
+    c.parent[idx1(grid, loc)...] = CuArray(buf1)
+    c.parent[idx2(grid, loc)...] = CuArray(buf2)
 end
