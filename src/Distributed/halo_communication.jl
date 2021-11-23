@@ -115,8 +115,8 @@ for (side, opposite_side) in zip([:west, :south, :bottom], [:east, :north, :top]
     recv_and_fill_opposite_side_halo! = Symbol("recv_and_fill_$(opposite_side)_halo!")
     underlying_side_halo = Symbol("underlying_$(side)_halo")
     underlying_opposite_side_halo = Symbol("underlying_$(opposite_side)_halo")
-    underlying_side_halo_indices = Symbol("underlying_$(side)_halo_indices")
-    underlying_opposite_side_halo_indices = Symbol("underlying_$(opposite_side)_halo_indices")
+    side_halo_indices = Symbol("$(side)_halo_indices")
+    opposite_side_halo_indices = Symbol("$(opposite_side)_halo_indices")
 
     @eval begin
         function $fill_both_halos!(c, bc_side::HaloCommunicationBC, bc_opposite_side::HaloCommunicationBC, arch, barrier, grid, c_location, args...)
@@ -132,14 +132,9 @@ for (side, opposite_side) in zip([:west, :south, :bottom], [:east, :north, :top]
             send_req1 = $send_side_halo(c, arch, grid, c_location, local_rank, bc_side.condition.to)
             send_req2 = $send_opposite_side_halo(c, arch, grid, c_location, local_rank, bc_opposite_side.condition.to)
 
-            if arch isa GPU 
-                MPI.Waitall!([recv_req1, recv_req2, send_req1, send_req2])
+            fill_buffer!(arch, c, recv_buf1, recv_req1, send_req1, grid, c_location, $side_halo_indices)
+            fill_buffer!(arch, c, recv_buf2, recv_req2, send_req2, grid, c_location, $opposite_side_halo_indices)
 
-                c.parent[$underlying_side_halo_indices(grid, c_location)...] = recv_buf1
-                c.parent[$underlying_opposite_side_halo_indices(grid, c_location)...] = recv_buf2
-
-                return nothing, nothing, nothing, nothing
-            end
             return recv_req1, recv_req2, send_req1, send_req2
         end
     end
@@ -189,13 +184,12 @@ for side in sides
     end
 end
 
-for (side, opposite_side) in zip([:west, :south, :bottom], [:east, :north, :top])
+for side in sides
     fill_side_halo! = Symbol("fill_$(side)_halo!")
     send_side_halo  = Symbol("send_$(side)_halo")
     recv_and_fill_side_halo! = Symbol("recv_and_fill_$(side)_halo!")
     underlying_side_halo = Symbol("underlying_$(side)_halo")
-    underlying_side_halo_indices = Symbol("underlying_$(side)_halo_indices")
-
+    side_halo_indices = Symbol("$(side)_halo_indices")
     @eval begin
         function $fill_side_halo!(c, bc_side::HaloCommunicationBC, arch, barrier, grid, c_location, args...)
             local_rank = bc_side.condition.from
@@ -203,15 +197,17 @@ for (side, opposite_side) in zip([:west, :south, :bottom], [:east, :north, :top]
             recv_buf1 = $underlying_side_halo(c, arch, grid, c_location)
             recv_req1 = $recv_and_fill_side_halo!(recv_buf1, arch, grid, c_location, local_rank, bc_side.condition.to)
             send_req1 = $send_side_halo(c, arch, grid, c_location, local_rank, bc_side.condition.to)
+            
+            fill_buffer(arch, c, recv_buf1, recv_req1, send_req1, grid, c_location, $side_halo_indices)
 
-            if arch isa GPU 
-                MPI.Waitall!([recv_req1, send_req1])
-
-                c.parent[$underlying_side_halo_indices(grid, c_location)...] = recv_buf1
- 
-                return nothing, nothing
-            end
             return recv_req1, send_req1
         end
     end
+end
+
+@inline fill_buffer!(::CPU, args...) = nothing
+
+function fill_buffer!(::GPU, c, buf, rreq, sreq, grid, loc, idx) 
+    MPI.Waitall!([rreq, sreq])
+    c.parent[idx(grid, loc)...] = buf
 end
