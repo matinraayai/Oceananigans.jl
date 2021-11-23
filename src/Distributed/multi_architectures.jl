@@ -46,10 +46,18 @@ function MultiArch(child_arch = CPU(); topology = (Periodic, Periodic, Periodic)
     γ = typeof(communicator)  
     
     #changing device to account for different GPUs
-    
     if child_arch == GPU()
-        length(CUDA.devices()) >= total_ranks || error("Not enough GPUs per ranks called")
-        CUDA.device!(local_rank)
+
+        # dividing nodes based on processor name
+        proc_name = Sys.cpu_info()[1].model
+        color = abs(Int32(hash(proc_name) % Int32))
+
+        # setting up the device associated with the processor in the node
+        comm_node = MPI.Comm_split(communicator, color, local_rank)
+        rank_gpu  = MPI.Comm_rank(comm_node)
+
+        length(devices()) <= MPI.Comm_size(comm_node) || error("Number of processes per node > number of GPUs per node!")
+        CUDA.device!(rank_gpu)
     end
 
     return MultiArch{A, R, I, ρ, C, γ}(child_arch, local_rank, local_index, ranks, local_connectivity, communicator)
