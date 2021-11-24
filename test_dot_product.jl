@@ -90,7 +90,7 @@ function parallel_dot(FT, a::AbstractArray, b::AbstractArray)
     return wrk
 end
 
-N = 512
+N = 128
 cpu_grid = RectilinearGrid(CPU(), extent=(1, 1), size=(N, N), halo=(1, 1), topology=(Periodic, Periodic, Flat))
 gpu_grid = RectilinearGrid(GPU(), extent=(1, 1), size=(N, N), halo=(1, 1), topology=(Periodic, Periodic, Flat))
 
@@ -113,6 +113,19 @@ FT = eltype(gpu_a6)
 
 set!(gpu_f1, gpu_a6)
 set!(gpu_f2, gpu_a7)
+
+function dot_cpu(a, b)
+    a_cpu = Array(a)
+    b_cpu = Array(b)
+
+    dot(a_cpu, b_cpu)
+
+    a = CuArray(a_cpu)
+    b = CuArray(b_cpu)
+
+    return a, b
+end
+
 
 
 @benchmark a = parallel_dot(FT, gpu_a6, gpu_a7)
