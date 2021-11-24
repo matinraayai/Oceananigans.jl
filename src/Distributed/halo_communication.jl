@@ -83,7 +83,7 @@ end
 
 #####
 ##### fill_west_and_east_halos!   }
-##### fill_south_and_north_halos! } for non-communicating boundary conditions (fallback)
+##### fill_south_and_north_halos! } for mixed boundary conditions (fallback)
 ##### fill_bottom_and_top_halos!  }
 #####
 
@@ -100,6 +100,37 @@ for (side, opposite_side) in zip([:west, :south, :bottom], [:east, :north, :top]
         end
     end
 end
+
+#####
+##### fill_west_halo!   }
+##### fill_east_halo!   }
+##### fill_south_halo!  }
+##### fill_north_halo!  } for one communicating boundary
+##### fill_bottom_halo! }
+##### fill_top_halo!    }
+#####
+
+for side in sides
+    fill_side_halo! = Symbol("fill_$(side)_halo!")
+    send_side_halo  = Symbol("send_$(side)_halo")
+    recv_and_fill_side_halo! = Symbol("recv_and_fill_$(side)_halo!")
+    underlying_side_halo = Symbol("underlying_$(side)_halo")
+    side_halo_indices = Symbol("$(side)_halo_indices")
+    @eval begin
+        function $fill_side_halo!(c, bc_side::HaloCommunicationBC, arch, barrier, grid, c_location, args...)
+            local_rank = bc_side.condition.from
+
+            recv_buf1 = $underlying_side_halo(c, arch, grid, c_location)
+            recv_req1 = $recv_and_fill_side_halo!(recv_buf1, arch, grid, c_location, local_rank, bc_side.condition.to)
+            send_req1 = $send_side_halo(c, arch, grid, c_location, local_rank, bc_side.condition.to)
+            
+            fill_buffer!(arch, c, recv_buf1, recv_req1, send_req1, grid, c_location, $side_halo_indices)
+
+            return recv_req1, send_req1
+        end
+    end
+end
+
 
 #####
 ##### fill_west_and_east_halos!   }
@@ -183,33 +214,15 @@ for side in sides
     end
 end
 
-for side in sides
-    fill_side_halo! = Symbol("fill_$(side)_halo!")
-    send_side_halo  = Symbol("send_$(side)_halo")
-    recv_and_fill_side_halo! = Symbol("recv_and_fill_$(side)_halo!")
-    underlying_side_halo = Symbol("underlying_$(side)_halo")
-    side_halo_indices = Symbol("$(side)_halo_indices")
-    @eval begin
-        function $fill_side_halo!(c, bc_side::HaloCommunicationBC, arch, barrier, grid, c_location, args...)
-            local_rank = bc_side.condition.from
+#####
+##### Copy buffers to GPU in case of GPU halo passing and non-cuda-aware MPI
+#####
 
-            recv_buf1 = $underlying_side_halo(c, arch, grid, c_location)
-            recv_req1 = $recv_and_fill_side_halo!(recv_buf1, arch, grid, c_location, local_rank, bc_side.condition.to)
-            send_req1 = $send_side_halo(c, arch, grid, c_location, local_rank, bc_side.condition.to)
-            
-            fill_buffer(arch, c, recv_buf1, recv_req1, send_req1, grid, c_location, $side_halo_indices)
-
-            return recv_req1, send_req1
-        end
-    end
-end
-
-@inline fill_buffer!(::CPU, args...) = nothing
 @inline fill_buffers!(::CPU, args...) = nothing
 
-function fill_buffer!(::GPU, c, buf, rreq, sreq, grid, loc, idx) 
+function fill_buffer!(arch, c, buf, rreq, sreq, grid, loc, idx) 
     MPI.Waitall!([rreq, sreq])
-    c.parent[idx(grid, loc)...] = CuArray(buf)
+    c.parent[idx(grid, loc)...] = buf
 end
 
 function fill_buffers!(::GPU, c, buf1, buf2, rreq1, rreq2, sreq1, sreq2, grid, loc, idx1, idx2) 

@@ -14,8 +14,12 @@ r = MPI.Comm_rank(MPI.COMM_WORLD) + 1
 cpu_arch = MultiArch(CPU(), ranks = (1, R, 1))
 gpu_arch = MultiArch(GPU(), ranks = (1, R, 1))
 
-cpu_grid = RectilinearGrid(cpu_arch, extent=(2, 8), size=(2, 8), halo=(1, 1), topology=(Periodic, Periodic, Flat))
-gpu_grid = RectilinearGrid(cpu_arch, extent=(2, 8), size=(2, 8), halo=(1, 1), topology=(Periodic, Periodic, Flat))
+N    = (128, 128, 32)
+topo = (Periodic, Periodic, Periodic)
+halo = (3, 3, 3)
+
+cpu_grid = RectilinearGrid(cpu_arch, extent=halo, size=N, halo=halo, topology=topo)
+gpu_grid = RectilinearGrid(gpu_arch, extent=halo, size=N, halo=halo, topology=topo)
 
 cpu_arch = cpu_grid.architecture
 gpu_arch = gpu_grid.architecture
@@ -26,13 +30,39 @@ gpu_field = CenterField(gpu_arch, gpu_grid)
 set!(cpu_field, r)
 set!(gpu_field, r)
 
-fill_halo_regions!(cpu_field, cpu_arch); 
-@test all(parent(cpu_field.data)[:,1,:] .== cpu_arch.connectivity.south + 1)
-@test all(parent(cpu_field.data)[:,end,:] .== cpu_arch.connectivity.north + 1)
-fill_halo_regions!(gpu_field, gpu_arch); 
-@test all(Array(parent(gpu_field.data))[:,1,:] .== gpu_arch.connectivity.south + 1)
-@test all(Array(parent(gpu_field.data))[:,end,:] .== gpu_arch.connectivity.north + 1)
+Hy1 = 1:cpu_grid.Hy
+Hy2 = cpu_grid.Ny + cpu_grid.Hy + 1 : cpu_grid.Ny + 2cpu_grid.Hy
 
+fill_halo_regions!(cpu_field, cpu_arch)
+
+if topo[2] != Periodic
+    if r == 1
+        @test all(parent(cpu_field.data)[:,Hy2,:] .== cpu_arch.connectivity.north + 1)
+    elseif r == R
+        @test all(parent(cpu_field.data)[:,Hy1,:] .== cpu_arch.connectivity.south + 1)
+    else
+        @test all(parent(cpu_field.data)[:,Hy1,:] .== cpu_arch.connectivity.south + 1)
+        @test all(parent(cpu_field.data)[:,Hy2,:] .== cpu_arch.connectivity.north + 1)
+    end
+else
+    @test all(parent(cpu_field.data)[:,Hy1,:] .== cpu_arch.connectivity.south + 1)
+    @test all(parent(cpu_field.data)[:,Hy2,:] .== cpu_arch.connectivity.north + 1)
+end
+
+fill_halo_regions!(gpu_field, gpu_arch)
+if topo[2] != Periodic
+    if r == 1
+        @test all(Array(parent(cpu_field.data))[:,Hy2,:] .== gpu_arch.connectivity.north + 1)
+    elseif r == R
+        @test all(Array(parent(cpu_field.data))[:,Hy1,:] .== gpu_arch.connectivity.south + 1)
+    else
+        @test all(Array(parent(cpu_field.data))[:,Hy1,:] .== gpu_arch.connectivity.south + 1)
+        @test all(Array(parent(cpu_field.data))[:,Hy2,:] .== gpu_arch.connectivity.north + 1)
+    end
+else
+    @test all(Array(parent(cpu_field.data))[:,Hy1,:] .== gpu_arch.connectivity.south + 1)
+    @test all(Array(parent(cpu_field.data))[:,Hy2,:] .== gpu_arch.connectivity.north + 1)
+end
 
 cpu_trial = @benchmark begin
     fill_halo_regions!($cpu_field, $cpu_arch)
@@ -41,4 +71,3 @@ end samples=10 evals=10
 gpu_trial = @benchmark begin
     fill_halo_regions!($gpu_field, $gpu_arch)
 end samples=10 evals=10
-
