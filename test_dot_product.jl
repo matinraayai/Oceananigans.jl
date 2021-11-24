@@ -1,8 +1,11 @@
 
 using Oceananigans
+using Oceananigans.Operators: Δyᶠᶜᵃ, Δxᶜᶠᵃ, Δzᵃᵃᶜ
 using CUDA
 using Statistics: dot
 using BenchmarkTools
+
+const MAX_THREADS_PER_BLOCK = 1024
 
 function reduce_multiply_one_block!(::Val{FT}, aout, ain, bin, ::Val{totSize}, ::Val{block}) where {FT, totSize, block}
 
@@ -71,14 +74,17 @@ function reduce_one_block!(::Val{FT}, aout, ain, ::Val{totSize}, ::Val{block}) w
     sync_threads()
 end
 
-function parallel_dot(FT, a::AbstractArray, b::AbstractArray, block, grid)
+function parallel_dot(FT, a::AbstractArray, b::AbstractArray)
+
+    block = Int(minimum([maximum([size(a)...]), MAX_THREADS_PER_BLOCK]))
+    grid  = Int(prod(size(gpu_a6)) / block)
 
     wrk   = CuArray{FT}(undef, grid) 
 	block = 2^floor(Int, log(2, block-1))
 
     @cuda threads=block blocks=grid reduce_multiply_one_block!(Val(FT), wrk, a, b, Val(grid*block*2), Val(block))
     if grid > 1 
-        @cuda threads=block blocks=1    reduce_one_block!(Val(FT), wrk, wrk, Val(grid), Val(block))
+        @cuda threads=block blocks=1 reduce_one_block!(Val(FT), wrk, wrk, Val(grid), Val(block))
     end
 
     return wrk
@@ -108,14 +114,12 @@ FT = eltype(gpu_a6)
 set!(gpu_f1, gpu_a6)
 set!(gpu_f2, gpu_a7)
 
-block = 1024 #Int(maximum([size(gpu_a6)..., 1024]))
-grid  = Int(prod(size(gpu_a6)) / block)
 
-@bechmark a = parallel_dot(FT, gpu_a6, gpu_a7, block, grid)
-@bechmark b = dot(gpu_a6, gpu_a7)
-@benchmark c = dot(gpu_f1, gpu_f2)
+@benchmark a = parallel_dot(FT, gpu_a6, gpu_a7)
+# @benchmark b = dot(gpu_a6, gpu_a7)
+# @benchmark c = dot(gpu_f1, gpu_f2)
 
-# @info "CPU benchmarking"
+@info "CPU benchmarking"
 
 # @info "benchmarking fields"
 # @benchmark dot(cpu_f1, cpu_f2)
