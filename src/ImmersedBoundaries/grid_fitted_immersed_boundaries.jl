@@ -64,22 +64,11 @@ function ImmersedBoundaryGrid(grid, ib::Union{ArrayGridFittedBottom, CuArrayGrid
 end
 
 const GFBIBG = ImmersedBoundaryGrid{<:Any, <:Any, <:Any, <:Any, <:Any, <:GridFittedBottom}
+const GMGFIB{LX, LY, LZ} = GridMetricOperation{LX, LY, LZ, <:GFBIBG}
 
-@inline Δzᵃᵃᶜ(i, j, k, ibg::GFBIBG) = ifelse(is_immersed(i, j, k, ibg.grid, ibg.immersed_boundary),
-                                             zero(eltype(ibg.grid)),
-                                             Δzᵃᵃᶜ(i, j, k, ibg.grid))
-
-@inline Δzᶠᶜᶜ(i, j, k, ibg::GFBIBG) = ifelse(solid_node(Face(), Center(), Center(), i, j, k, ibg),
-                                             zero(eltype(ibg)),
-                                             Δzᵃᵃᶜ(i, j, k, ibg.grid))
-
-@inline Δzᶜᶠᶜ(i, j, k, ibg::GFBIBG) = ifelse(solid_node(Center(), Face(), Center(), i, j, k, ibg),
-                                             zero(eltype(ibg)),
-                                             Δzᵃᵃᶜ(i, j, k, ibg.grid))
-
-@inline Δzᵃᵃᶠ(i, j, k, ibg::GFBIBG) = ifelse(is_immersed(i, j, k, ibg.grid, ibg.immersed_boundary),
-                                             zero(eltype(ibg.grid)),
-                                             Δzᵃᵃᶠ(i, j, k, ibg.grid))
+@inline Base.getindex(gm::GMGFIB{LX, LY, LZ}, i, j, k) where {LX, LY, LZ} = ifelse(solid_node(LX(), LY(), LZ(), i, j, k, gm.grid),
+                                                                                   zero(eltype(ibg)),
+                                                                                   gm.metric(i, j, k, gm.grid.grid))
 
 Adapt.adapt_structure(to, ib::GridFittedBottom) = GridFittedBottom(adapt(to, ib.bottom))     
 
@@ -93,28 +82,29 @@ Adapt.adapt_structure(to, ib::GridFittedBottom) = GridFittedBottom(adapt(to, ib.
 # extending the upper and lower diagonal functions of the batched tridiagonal solver
 
 for location in (:upper_, :lower_)
-    func = Symbol(:ivd_, location, :diagonal)
+    alt_func = Symbol(:_ivd_, location, :diagonal)
+     func    = Symbol( :ivd_, location, :diagonal)
     @eval begin
-        @inline function $func(i, j, k, ibg::GFIBG, LX, LY, LZ::Face, clock, Δt, interp_κ, κ)
+        @inline function $alt_func(i, j, k, ibg::GFIBG, LX, LY, LZ, clock, Δt, interp_κ, κ)
             return ifelse(z_solid_node(LX, LY, LZ, i, j, k, ibg),
                           zero(eltype(ibg.grid)),
                           $func(i, j, k, ibg.grid, LX, LY, LZ, clock, Δt, interp_κ, κ))
         end
-        @inline function $func(i, j, k, ibg::GFIBG, LX, LY, LZ::Center, clock, Δt, interp_κ, κ)
-            return ifelse(z_solid_node(LX, LY, LZ, i, j, k, ibg),
-                          zero(eltype(ibg.grid)),
-                          $func(i, j, k, ibg.grid, LX, LY, LZ, clock, Δt, interp_κ, κ))
-        end
+
+        @inline $func(i, j, k, ibg::GFIBG, LX, LY, LZ::Face, clock, Δt, interp_κ, κ) = 
+                $alt_func(i, j, k, ibg, LX, LY, LZ, clock, Δt, interp_κ, κ)
+        @inline $func(i, j, k, ibg::GFIBG, LX, LY, LZ::Center, clock, Δt, interp_κ, κ) = 
+                $alt_func(i, j, k, ibg, LX, LY, LZ, clock, Δt, interp_κ, κ)
     end
 end
 
 # metrics are 0 inside the immersed boundaries. This means that derivatives are broken!
 # To avoid NaNs appearing everywhere we must be able to define derivatives also inside or across the immersed boundary
 
-derivative_operators = (:∂xᶜᵃᵃ, :∂xᶠᵃᵃ, :∂xᶠᶜᵃ, :∂xᶜᶠᵃ, :∂xᶠᶠᵃ, :∂xᶜᶜᵃ, 
-                        :∂yᵃᶜᵃ, :∂yᵃᶠᵃ, :∂yᶠᶜᵃ, :∂yᶜᶠᵃ, :∂yᶠᶠᵃ, :∂yᶜᶜᵃ,  
-                        :∂zᵃᵃᶜ, :∂zᵃᵃᶠ)
+# operators = (:∂xᶜᵃᵃ, :∂xᶠᵃᵃ, :∂xᶠᶜᵃ, :∂xᶜᶠᵃ, :∂xᶠᶠᵃ, :∂xᶜᶜᵃ, 
+#              :∂yᵃᶜᵃ, :∂yᵃᶠᵃ, :∂yᶠᶜᵃ, :∂yᶜᶠᵃ, :∂yᶠᶠᵃ, :∂yᶜᶜᵃ,  
+#              :∂zᵃᵃᶜ, :∂zᵃᵃᶠ)
 
-for operator in derivative_operators
-        @eval $operator(i, j, k, ibg::GFIBG, args...) = $operator(i, j, k, ibg.grid, args...)
-end
+# for operator in derivative_operators
+#         @eval $operator(i, j, k, ibg::GFIBG, args...) = $operator(i, j, k, ibg.grid, args...)
+# end

@@ -14,7 +14,7 @@ validity of the stretched WENO scheme
 """
 
 function multiple_steps!(model)
-    for i = 1:1000
+    for i = 1:10
         time_step!(model, 1e-6)
     end
     return nothing
@@ -46,7 +46,7 @@ coord     = Dict()
 time      = Dict()
 
 # 1D grid constructions
-grid_reg  = RectilinearGrid(arch, size = N, x = Freg,  halo = 3, topology = (Periodic, Flat, Flat))    
+# grid_reg  = RectilinearGrid(arch, size = N, x = Freg,  halo = 3, topology = (Periodic, Flat, Flat))    
 grid_str  = RectilinearGrid(arch, size = N, x = Fsaw,  halo = 3, topology = (Periodic, Flat, Flat))    
 grid_str2 = RectilinearGrid(arch, size = N, x = Fstr2, halo = 3, topology = (Periodic, Flat, Flat))    
 
@@ -84,14 +84,13 @@ for (gr, grid) in enumerate([grid_reg, grid_str, grid_str2])
             scheme = WENO5(grid = grid, stretched_smoothness = true, zweno = true)
         end
 
-        model = HydrostaticFreeSurfaceModel(architecture = arch,
-                                                    grid = grid,
-                                                 tracers = :c,
-                                        tracer_advection = scheme,
-                                              velocities = PrescribedVelocityFields(u=U), 
-                                                coriolis = nothing,
-                                                 closure = nothing,
-                                                buoyancy = nothing)
+        model = HydrostaticFreeSurfaceModel(grid = grid,
+                                         tracers = :c,
+                                tracer_advection = scheme,
+                                      velocities = PrescribedVelocityFields(u=U), 
+                                        coriolis = nothing,
+                                         closure = nothing,
+                                        buoyancy = nothing)
         
         set!(model, c=c₀_1D)
         c = model.tracers.c

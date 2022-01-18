@@ -18,8 +18,8 @@ using Oceananigans.ImmersedBoundaries
 
 # Ensure that we don't get NaNs because of Δzᵃᵃᶠ = 0 in the immersed boundary
 
-@inbounds ζ₂wᶠᶜᶠ(i, j, k, ibg::ImmersedBoundaryGrid, u, w) = ζ₂wᶠᶜᶠ(i, j, k, ibg.grid, u, w)
-@inbounds ζ₁wᶜᶠᶠ(i, j, k, ibg::ImmersedBoundaryGrid, v, w) = ζ₁wᶜᶠᶠ(i, j, k, ibg.grid, v, w)
+# @inbounds ζ₂wᶠᶜᶠ(i, j, k, ibg::ImmersedBoundaryGrid, u, w) = ζ₂wᶠᶜᶠ(i, j, k, ibg.grid, u, w)
+# @inbounds ζ₁wᶜᶠᶠ(i, j, k, ibg::ImmersedBoundaryGrid, v, w) = ζ₁wᶜᶠᶠ(i, j, k, ibg.grid, v, w)
 
 @inline U_dot_∇u(i, j, k, grid, advection::VectorInvariant, U) = (
     - ℑyᵃᶜᵃ(i, j, k, grid, ζ₃ᶠᶠᵃ, U.u, U.v) * ℑxᶠᵃᵃ(i, j, k, grid, ℑyᵃᶜᵃ, Δx_vᶜᶠᵃ, U.v) / Δxᶠᶜᵃ(i, j, k, grid) # Vertical relative vorticity term

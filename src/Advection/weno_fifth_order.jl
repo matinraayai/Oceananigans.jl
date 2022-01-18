@@ -138,10 +138,11 @@ Castro et al, High order weighted essentially non-oscillatory WENO-Z schemes for
 """
 function WENO5(FT = Float64; grid = nothing, stretched_smoothness = false, zweno = false)
     
+    rect_metrics = (:xᶠᵃᵃ, :xᶜᵃᵃ, :yᵃᶠᵃ, :yᵃᶜᵃ, :zᵃᵃᶠ, :zᵃᵃᶜ)
 
     if grid isa Nothing
         @warn "defaulting to uniform WENO scheme with $(FT) precision, use WENO5(grid = grid) if this was not intended"
-        for metric in metrics
+        for metric in rect_metrics
             @eval $(Symbol(:coeff_ , metric)) = nothing
             @eval $(Symbol(:smooth_, metric)) = nothing
         end
@@ -149,7 +150,6 @@ function WENO5(FT = Float64; grid = nothing, stretched_smoothness = false, zweno
         !(grid isa RectilinearGrid) && (@warn "WENO on a curvilinear stretched coordinate is not validated, use at your own risk!!")
 
         metrics      = return_metrics(grid)
-        rect_metrics = (:xᶠᵃᵃ, :xᶜᵃᵃ, :yᵃᶠᵃ, :yᵃᶜᵃ, :zᵃᵃᶠ, :zᵃᵃᶜ)
         dirsize      = (:Nx, :Nx, :Ny, :Ny, :Nz, :Nz)
 
         FT       = eltype(grid)

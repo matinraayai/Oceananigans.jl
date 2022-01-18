@@ -1,19 +1,6 @@
 using Oceananigans.Grids: halo_size
+using Oceananigans.AbstractOperations: Ax, Ay, GridMetricOperation
 # Has to be changed when the regression data is updated 
-
-@kernel function _compute_vertically_integrated_lateral_areas!(∫ᶻ_A, grid)
-    i, j = @index(Global, NTuple)
-
-    @inbounds begin
-        ∫ᶻ_A.xᶠᶜᶜ[i, j, 1] = 0
-        ∫ᶻ_A.yᶜᶠᶜ[i, j, 1] = 0
-
-        @unroll for k in 1:grid.Nz
-            ∫ᶻ_A.xᶠᶜᶜ[i, j, 1] += Δyᶠᶜᵃ(i, j, k, grid) * Δzᶠᶜᶜ(i, j, k, grid)
-            ∫ᶻ_A.yᶜᶠᶜ[i, j, 1] += Δxᶜᶠᵃ(i, j, k, grid) * Δzᶜᶠᶜ(i, j, k, grid)
-        end
-    end
-end
 
 function compute_vertically_integrated_lateral_areas!(∫ᶻ_A)
 
@@ -24,12 +11,11 @@ function compute_vertically_integrated_lateral_areas!(∫ᶻ_A)
     field_grid = ∫ᶻ_A.xᶠᶜᶜ.grid
     arch = architecture(field_grid)
 
-    event = launch!(arch, field_grid, :xy,
-                    _compute_vertically_integrated_lateral_areas!,
-                    ∫ᶻ_A, field_grid,
-                    dependencies=Event(device(arch)))
+    Axᶠᶜᶜ = GridMetricOperation((Face, Center, Center), Ax, field_grid)
+    Ayᶜᶠᶜ = GridMetricOperation((Center, Face, Center), Ay, field_grid)
     
-    wait(device(arch), event)
+    sum!(∫ᶻ_A.xᶠᶜᶜ, Axᶠᶜᶜ)
+    sum!(∫ᶻ_A.yᶜᶠᶜ, Ayᶜᶠᶜ)
 
     fill_halo_regions!(∫ᶻ_A.xᶠᶜᶜ, arch)
     fill_halo_regions!(∫ᶻ_A.yᶜᶠᶜ, arch)

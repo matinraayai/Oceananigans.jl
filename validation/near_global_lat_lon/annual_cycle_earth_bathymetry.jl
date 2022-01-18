@@ -184,8 +184,7 @@ T_bcs = FieldBoundaryConditions(top = T_surface_relaxation_bc)
 free_surface = ImplicitFreeSurface(solver_method=:MatrixIterativeSolver, preconditioner_method=:SparseInverse,
                                    preconditioner_settings=(ε=0.01, nzrel=6))
 
-free_surface = ImplicitFreeSurface(solver_method=:HeptadiagonalIterativeSolver, preconditioner_method=:SparseInverse,
-                                   preconditioner_settings = (ε = 0.005, nzrel = 10))
+free_surface = ExplicitFreeSurface()
 
 model = HydrostaticFreeSurfaceModel(grid = grid,
                                     free_surface = free_surface,
