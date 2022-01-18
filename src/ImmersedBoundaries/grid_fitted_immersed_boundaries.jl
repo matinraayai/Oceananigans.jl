@@ -38,6 +38,8 @@ struct GridFittedBottom{B} <: AbstractGridFittedBoundary
     bottom :: B
 end
 
+const GFBIBG = ImmersedBoundaryGrid{<:Any, <:Any, <:Any, <:Any, <:Any, <:GridFittedBottom}
+
 @inline function is_immersed(i, j, k, underlying_grid, ib::GridFittedBottom)
     x, y, z = node(c, c, c, i, j, k, underlying_grid)
     return z < ib.bottom(x, y)
@@ -62,13 +64,6 @@ function ImmersedBoundaryGrid(grid, ib::Union{ArrayGridFittedBottom, CuArrayGrid
     new_ib = GridFittedBottom(offset_bottom_array)
     return ImmersedBoundaryGrid(grid, new_ib)
 end
-
-const GFBIBG = ImmersedBoundaryGrid{<:Any, <:Any, <:Any, <:Any, <:Any, <:GridFittedBottom}
-const GMGFIB{LX, LY, LZ} = GridMetricOperation{LX, LY, LZ, <:GFBIBG}
-
-@inline Base.getindex(gm::GMGFIB{LX, LY, LZ}, i, j, k) where {LX, LY, LZ} = ifelse(solid_node(LX(), LY(), LZ(), i, j, k, gm.grid),
-                                                                                   zero(eltype(ibg)),
-                                                                                   gm.metric(i, j, k, gm.grid.grid))
 
 Adapt.adapt_structure(to, ib::GridFittedBottom) = GridFittedBottom(adapt(to, ib.bottom))     
 
