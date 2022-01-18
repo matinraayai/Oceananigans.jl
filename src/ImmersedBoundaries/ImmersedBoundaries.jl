@@ -3,6 +3,7 @@ module ImmersedBoundaries
 using Adapt
 
 using Oceananigans.Grids
+using Oceananigans.Grids: short_show, domain_string
 using Oceananigans.Operators
 using Oceananigans.Fields
 using Oceananigans.Utils
@@ -36,8 +37,9 @@ using Oceananigans.Advection:
     advective_tracer_flux_y,
     advective_tracer_flux_z
 
+import Base: show
 import Oceananigans.Utils: cell_advection_timescale
-import Oceananigans.Grids: with_halo, architecture
+import Oceananigans.Grids: with_halo, architecture, domain_string
 import Oceananigans.Coriolis: φᶠᶠᵃ
 import Oceananigans.Grids: with_halo, xnode, ynode, znode, all_x_nodes, all_y_nodes, all_z_nodes
 import Oceananigans.Grids: on_architecture
@@ -117,6 +119,8 @@ const IBG = ImmersedBoundaryGrid
 
 @inline architecture(ibg::IBG) = architecture(ibg.grid)
 
+domain_string(ibg::IBG) = domain_string(ibg.grid)
+
 Adapt.adapt_structure(to, ibg::IBG{FT, TX, TY, TZ}) where {FT, TX, TY, TZ} =
     ImmersedBoundaryGrid{TX, TY, TZ}(adapt(to, ibg.grid), adapt(to, ibg.immersed_boundary))
 
@@ -147,6 +151,12 @@ function on_architecture(arch, ibg::ImmersedBoundaryGrid)
     return ImmersedBoundaryGrid(underlying_grid, immersed_boundary)
 end
 
+function show(io::IO, g::ImmersedBoundaryGrid) 
+    print(io, "ImmersedBoundaryGrid\n",
+              "    architecture: $(g.architecture)\n",
+              " underlying_grid: $(g.grid)")
+end
+
 include("immersed_grid_metrics.jl")
 include("grid_fitted_immersed_boundaries.jl")
 include("conditional_fluxes.jl")
@@ -166,7 +176,7 @@ for (locate_coeff, loc) in ((:κᶠᶜᶜ, (f, c, c)),
 
     @eval begin
         @inline $locate_coeff(i, j, k, ibg::IBG{FT}, coeff) where FT =
-            ifelse(solid_cell(loc..., i, j, k, ibg), $locate_coeff(i, j, k, ibg.grid, coeff), zero(FT))
+            ifelse(solid_node(loc..., i, j, k, ibg), $locate_coeff(i, j, k, ibg.grid, coeff), zero(FT))
     end
 end
 

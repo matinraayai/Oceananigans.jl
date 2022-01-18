@@ -4,20 +4,19 @@ const c = Center()
 const f = Face()
 
 """
-    `solid_node` will return true only if a location is completely immersed
-    `solid_interface` will return true if a location is partially immersed
+    `solid_node` returns true only if a location is completely immersed
+    `solid_interface` returns true if a location is partially immersed
         
     as an example (in a 1D immersed grid) :
 
-    Immersed       Fluid
+     Immersed      Fluid
     ----------- ...........
    |     ∘     |     ∘ 
    f     c     f     c
   i-1   i-1    i     i
 
-     solid_interface(f, c, c, i, 1, 1, grid) = true 
-     solid_node(f, c, c, i, 1, 1, grid)      = false
-
+     `solid_interface(f, c, c, i, 1, 1, grid) = true`
+     `solid_node(f, c, c, i, 1, 1, grid)      = false`
 """
 @inline solid_node(LX, LY, LZ, i, j, k, ibg)      = is_immersed(i, j, k, ibg.grid, ibg.immersed_boundary)
 
@@ -33,6 +32,8 @@ const f = Face()
 @inline solid_node(LX, ::Face, ::Face, i, j, k, ibg) = solid_node(c, f, c, i, j, k, ibg) & solid_node(c, f, c, i, j, k-1, ibg)
 
 @inline solid_node(::Face, ::Face, ::Face, i, j, k, ibg) = solid_node(c, f, f, i, j, k, ibg) & solid_node(c, f, f, i-1, j, k, ibg)
+
+@inline solid_interface(i, j, k, ibg) = is_immersed(i, j, k, ibg.grid, ibg.immersed_boundary)
 
 @inline solid_interface(LX, LY, LZ, i, j, k, ibg) = is_immersed(i, j, k, ibg.grid, ibg.immersed_boundary)
 

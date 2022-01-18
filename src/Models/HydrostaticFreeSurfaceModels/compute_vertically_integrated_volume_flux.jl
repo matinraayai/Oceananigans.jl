@@ -13,14 +13,17 @@ function compute_vertically_integrated_volume_flux!(∫ᶻ_U, model)
     # Fill halo regions for predictor velocity.
     fill_halo_regions!(model.velocities, model.architecture, model.clock, fields(model))
 
-    # Compute the vertically integrated volume flux
-    event = launch!(model.architecture, model.grid, :xy,
-                    _compute_vertically_integrated_volume_flux!,
-                    ∫ᶻ_U, model.grid, model.velocities,
-                    dependencies = device_event(model.architecture))
-                    # include_right_boundaries = true) # <- get this to work with layout = :xy
+    sum!(∫ᶻ_U.u, XAreaMetric() * model.velocities.u)
+    sum!(∫ᶻ_U.v, YAreaMetric() * model.velocities.v)
+
+    # # Compute the vertically integrated volume flux
+    # event = launch!(model.architecture, model.grid, :xy,
+    #                 _compute_vertically_integrated_volume_flux!,
+    #                 ∫ᶻ_U, model.grid, model.velocities,
+    #                 dependencies = device_event(model.architecture))
+    #                 # include_right_boundaries = true) # <- get this to work with layout = :xy
                     
-    wait(device(model.architecture), event)
+    # wait(device(model.architecture), event)
 
     # We didn't include right boundaries, so...
     fill_halo_regions!(∫ᶻ_U, model.architecture, model.clock, fields(model))

@@ -68,7 +68,7 @@ c₀_2D(x, y, z) = mask(x) * mask(y)
 for (gr, grid) in enumerate([grid_str, grid_str2])
     
     U = Field{Face, Center, Center}(grid)
-    parent(U) .= 1
+    parent(U) .= - 1
 
     Δt_max   = 0.2 * min_Δx(grid)
     end_time = iter * Δt_max
@@ -130,70 +130,69 @@ end
 # 2D advection test
 # """
 
-solution2D  = Dict()
+# solution2D  = Dict()
 
-grid_reg  = RectilinearGrid(size = (N, N), x = Freg,  y = Freg,  halo = (3, 3), topology = (Periodic, Periodic, Flat), architecture = arch)    
-grid_str  = RectilinearGrid(size = (N, N), x = Fsaw,  y = Fsaw,  halo = (3, 3), topology = (Periodic, Periodic, Flat), architecture = arch)    
-grid_str2 = RectilinearGrid(size = (N, N), x = Fstr2, y = Fstr2, halo = (3, 3), topology = (Periodic, Periodic, Flat), architecture = arch)    
+# grid_reg  = RectilinearGrid(arch,size = (N, N), x = Freg,  y = Freg,  halo = (3, 3), topology = (Periodic, Periodic, Flat))    
+# grid_str  = RectilinearGrid(arch,size = (N, N), x = Fsaw,  y = Fsaw,  halo = (3, 3), topology = (Periodic, Periodic, Flat))    
+# grid_str2 = RectilinearGrid(arch,size = (N, N), x = Fstr2, y = Fstr2, halo = (3, 3), topology = (Periodic, Periodic, Flat))    
 
-for (gr, grid) in enumerate([grid_str, grid_str2])
+# for (gr, grid) in enumerate([grid_str, grid_str2])
     
-    U = Field{Face, Center, Center}(grid)
-    V = Field{Center, Face, Center}(grid)
+#     U = Field{Face, Center, Center}(grid)
+#     V = Field{Center, Face, Center}(grid)
 
-    parent(U) .= 1
-    parent(V) .= 0.3
+#     parent(U) .= 1
+#     parent(V) .= 0.3
     
-    Δt_max   = 0.1 * min_Δx(grid)  # faster in U than in V
-    end_time = 2 * iter * Δt_max
+#     Δt_max   = 0.1 * min_Δx(grid)  # faster in U than in V
+#     end_time = 2 * iter * Δt_max
 
-    maxAdv1 = []; maxAdv2 = []; maxAdv3 = []; maxAdv4 = []; 
-    for (adv, scheme) in enumerate(advection) 
+#     maxAdv1 = []; maxAdv2 = []; maxAdv3 = []; maxAdv4 = []; 
+#     for (adv, scheme) in enumerate(advection) 
 
-        if adv == 2
-            scheme = WENO5(grid = grid)
-        end
-        if adv == 3
-            scheme = WENO5(grid = grid, stretched_smoothness = true)
-        end
-        if adv == 4
-            scheme = WENO5(grid = grid, stretched_smoothness = true, zweno = true)
-        end
+#         if adv == 2
+#             scheme = WENO5(grid = grid)
+#         end
+#         if adv == 3
+#             scheme = WENO5(grid = grid, stretched_smoothness = true)
+#         end
+#         if adv == 4
+#             scheme = WENO5(grid = grid, stretched_smoothness = true, zweno = true)
+#         end
 
-        model = HydrostaticFreeSurfaceModel(architecture = arch,
-                                                    grid = grid,
-                                                tracers  = :c,
-                                        tracer_advection = scheme,
-                                            velocities   = PrescribedVelocityFields(u=U, v=V), 
-                                                coriolis = nothing,
-                                                closure  = nothing,
-                                                buoyancy = nothing)
+#         model = HydrostaticFreeSurfaceModel(grid = grid,
+#                                                 tracers  = :c,
+#                                         tracer_advection = scheme,
+#                                             velocities   = PrescribedVelocityFields(u=U, v=V), 
+#                                                 coriolis = nothing,
+#                                                 closure  = nothing,
+#                                                 buoyancy = nothing)
 
-        c = model.tracers.c
-        set!(model, c=c₀_2D)
+#         c = model.tracers.c
+#         set!(model, c=c₀_2D)
         
-        simulation = Simulation(model,
-                                Δt = Δt_max,
-                                stop_time = end_time)
+#         simulation = Simulation(model,
+#                                 Δt = Δt_max,
+#                                 stop_time = end_time)
 
-        for i = 1:end_time/Δt_max/10
-            csim                               = adapt(CPU(), c)
-            solution2D[(schemes[adv], Int(i))] = csim[1:N, 1:N, 1]
+#         for i = 1:end_time/Δt_max/10
+#             csim                               = adapt(CPU(), c)
+#             solution2D[(schemes[adv], Int(i))] = csim[1:N, 1:N, 1]
             
-            for j = 1:10
-                time_step!(model, Δt_max)
-            end
-        end
-    end
+#             for j = 1:10
+#                 time_step!(model, Δt_max)
+#             end
+#         end
+#     end
 
-    x     = adapt(CPU(), grid.xᶜᵃᵃ)[1:N]
-    y     = adapt(CPU(), grid.yᵃᶜᵃ)[1:N]
-    steps = ()
-    anim = @animate for i ∈ 1:end_time/Δt_max/10
-        plot(contourf(x, y, solution2D[(schemes[1], Int(i))], clim=(0, 1), levels = 0:0.1:1, title="Uweno"),
-             contourf(x, y, solution2D[(schemes[2], Int(i))], clim=(0, 1), levels = 0:0.1:1, title="Sweno"),
-             contourf(x, y, solution2D[(schemes[3], Int(i))], clim=(0, 1), levels = 0:0.1:1, title="βweno"),
-             contourf(x, y, solution2D[(schemes[4], Int(i))], clim=(0, 1), levels = 0:0.1:1, title="Zweno"))
-    end
-    mp4(anim, "anim_2D_$gr.mp4", fps = 15)
-end
+#     x     = adapt(CPU(), grid.xᶜᵃᵃ)[1:N]
+#     y     = adapt(CPU(), grid.yᵃᶜᵃ)[1:N]
+#     steps = ()
+#     anim = @animate for i ∈ 1:end_time/Δt_max/10
+#         plot(contourf(x, y, solution2D[(schemes[1], Int(i))], clim=(0, 1), levels = 0:0.1:1, title="Uweno"),
+#              contourf(x, y, solution2D[(schemes[2], Int(i))], clim=(0, 1), levels = 0:0.1:1, title="Sweno"),
+#              contourf(x, y, solution2D[(schemes[3], Int(i))], clim=(0, 1), levels = 0:0.1:1, title="βweno"),
+#              contourf(x, y, solution2D[(schemes[4], Int(i))], clim=(0, 1), levels = 0:0.1:1, title="Zweno"))
+#     end
+#     mp4(anim, "anim_2D_$gr.mp4", fps = 15)
+# end
