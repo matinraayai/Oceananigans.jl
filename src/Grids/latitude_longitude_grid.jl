@@ -248,6 +248,22 @@ function on_architecture(new_arch, old_grid::LatitudeLongitudeGrid)
                                              old_grid.radius)
 end
 
+function with_halo(new_halo, old_grid::LatitudeLongitudeGrid)
+
+    size = (old_grid.Nx, old_grid.Ny, old_grid.Nz)
+
+    x = cpu_face_constructor_x(old_grid)
+    y = cpu_face_constructor_y(old_grid)
+    z = cpu_face_constructor_z(old_grid)  
+
+    new_grid = LatitudeLongitudeGrid(architecture(old_grid), eltype(old_grid);
+                                     size = size,
+                                     longitude = x, latitude = y, z = z,
+                                     halo = new_halo)
+
+    return new_grid
+end
+
 function Adapt.adapt_structure(to, grid::LatitudeLongitudeGrid)
     TX, TY, TZ = topology(grid)
     return LatitudeLongitudeGrid{TX, TY, TZ}(nothing,
