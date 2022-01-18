@@ -65,7 +65,7 @@ c₀_1D(x, y, z) = @. 10 * exp(-(x - 0.5)^2 / 0.2^2)
 c₀_2D(x, y, z) = mask(x) * mask(y) 
 
 # Checking the accuracy of different schemes with different settings
-for (gr, grid) in enumerate([grid_reg, grid_str, grid_str2])
+for (gr, grid) in enumerate([grid_str, grid_str2])
     
     U = Field{Face, Center, Center}(grid)
     parent(U) .= 1
@@ -136,7 +136,7 @@ grid_reg  = RectilinearGrid(size = (N, N), x = Freg,  y = Freg,  halo = (3, 3), 
 grid_str  = RectilinearGrid(size = (N, N), x = Fsaw,  y = Fsaw,  halo = (3, 3), topology = (Periodic, Periodic, Flat), architecture = arch)    
 grid_str2 = RectilinearGrid(size = (N, N), x = Fstr2, y = Fstr2, halo = (3, 3), topology = (Periodic, Periodic, Flat), architecture = arch)    
 
-for (gr, grid) in enumerate([grid_reg, grid_str, grid_str2])
+for (gr, grid) in enumerate([grid_str, grid_str2])
     
     U = Field{Face, Center, Center}(grid)
     V = Field{Center, Face, Center}(grid)

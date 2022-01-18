@@ -197,7 +197,8 @@ u_bcs = FieldBoundaryConditions(top = u_wind_stress_bc, bottom = u_bottom_drag_b
 v_bcs = FieldBoundaryConditions(top = v_wind_stress_bc, bottom = v_bottom_drag_bc)
 T_bcs = FieldBoundaryConditions(top = T_surface_relaxation_bc)
 
-free_surface = ImplicitFreeSurface(solver_method=:HeptadiagonalIterativeSolver)
+free_surface = ImplicitFreeSurface(solver_method=:HeptadiagonalIterativeSolver, preconditioner_method = :AsymptoticInverse,
+                                   preconditioner_settings = (order = 1,))
 buoyancy     = SeawaterBuoyancy(equation_of_state=LinearEquationOfState(α=2e-4, β=0.0), constant_salinity = true)
 
 model = HydrostaticFreeSurfaceModel(grid = grid,
