@@ -168,22 +168,22 @@ v_wind_stress_bc = FluxBoundaryCondition(wind_stress, discrete_form = true, para
 μ         = Δz_bottom / 10days
 μ_forcing = 10days
 
-@inline function u_immersed_drag(i, j, k, grid, clock, fields, μ)
-    u = @inbounds fields.u[i, j, k]
-    return ifelse(is_immersed_boundary(Face(), Center(), Face(), i, j, k, grid), 
-                  - μ * u,
-                 zero(eltype(grid)))
-end
+# @inline function u_immersed_drag(i, j, k, grid, clock, fields, μ)
+#     u = @inbounds fields.u[i, j, k]
+#     return ifelse(is_immersed_boundary(Face(), Center(), Face(), i, j, k, grid), 
+#                   - μ * u,
+#                  zero(eltype(grid)))
+# end
 
-@inline function v_immersed_drag(i, j, k, grid, clock, fields, μ)
-    v = @inbounds fields.v[i, j, k]
-    return ifelse(is_immersed_boundary(Center(), Face(), Face(), i, j, k, grid), 
-                  - μ * v,
-                 zero(eltype(grid)))
-end
+# @inline function v_immersed_drag(i, j, k, grid, clock, fields, μ)
+#     v = @inbounds fields.v[i, j, k]
+#     return ifelse(is_immersed_boundary(Center(), Face(), Face(), i, j, k, grid), 
+#                   - μ * v,
+#                  zero(eltype(grid)))
+# end
 
-Fu = Forcing(u_immersed_drag, discrete_form = true, parameters = μ_forcing)
-Fv = Forcing(v_immersed_drag, discrete_form = true, parameters = μ_forcing)
+# Fu = Forcing(u_immersed_drag, discrete_form = true, parameters = μ_forcing)
+# Fv = Forcing(v_immersed_drag, discrete_form = true, parameters = μ_forcing)
 
 u_bottom_drag_bc = FluxBoundaryCondition(u_bottom_drag, discrete_form = true, parameters = μ)
 v_bottom_drag_bc = FluxBoundaryCondition(v_bottom_drag, discrete_form = true, parameters = μ)
@@ -255,7 +255,7 @@ function progress(sim)
     return nothing
 end
 
-simulation.callbacks[:progress] = Callback(progress, IterationInterval(1))
+simulation.callbacks[:progress] = Callback(progress, IterationInterval(100))
 
 u, v, w = model.velocities
 T, S = model.tracers

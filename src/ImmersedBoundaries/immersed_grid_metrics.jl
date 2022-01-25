@@ -1,8 +1,7 @@
 
 const c = Center()
 const f = Face()
-
-using Oceananigans.AbstractOperations: GridMetricOperation
+const n = Nothing()
 
 """
     `solid_node` returns true only if a location is completely immersed
@@ -56,6 +55,17 @@ using Oceananigans.AbstractOperations: GridMetricOperation
 @inline solid_interface(LX, ::Face, ::Face, i, j, k, ibg) = solid_interface(c, f, c, i, j, k, ibg) | solid_interface(c, f, c, i, j, k-1, ibg)
 
 @inline solid_interface(::Face, ::Face, ::Face, i, j, k, ibg) = solid_interface(c, f, f, i, j, k, ibg) | solid_interface(c, f, f, i-1, j, k, ibg)
+
+# Support for reduced Fields with Nothing location
+@inline solid_interface(::Nothing, LY, LZ, i, j, k, ibg) = all(solid_interface.(Ref(c), Ref(LY), Ref(LZ), 1:ibg.Nx, Ref(j), Ref(k), Ref(ibg)))
+@inline solid_interface(LX, ::Nothing, LZ, i, j, k, ibg) = all(solid_interface.(Ref(LX), Ref(c), Ref(LY), Ref(i), 1:ibg.Ny, Ref(k), Ref(ibg)))
+@inline solid_interface(LX, LY, ::Nothing, i, j, k, ibg) = all(solid_interface.(Ref(LX), Ref(LY), Ref(c), Ref(i), Ref(j), 1:ibg.Nz, Ref(ibg)))
+
+@inline solid_interface(::Nothing, ::Nothing, LZ, i, j, k, ibg) = all(solid_interface.(Ref(n), Ref(c), Ref(LZ), Ref(i), 1:ibg.Ny, Ref(k), Ref(ibg)))
+@inline solid_interface(::Nothing, LY, ::Nothing, i, j, k, ibg) = all(solid_interface.(Ref(n), Ref(LY), Ref(c), Ref(i), Ref(j), 1:ibg.Nz, Ref(ibg)))
+@inline solid_interface(LX, ::Nothing, ::Nothing, i, j, k, ibg) = all(solid_interface.(Ref(LX), Ref(c), Ref(n), Ref(i), 1:ibg.Ny, Ref(k), Ref(ibg)))
+
+@inline solid_interface(::Nothing, ::Nothing, ::Nothing, i, j, k, ibg) = all(solid_interface.(Ref(c), Ref(n), Ref(n), 1:grid.Nx, Ref(j), Ref(k), Ref(ibg)))
 
 @inline is_immersed_boundary(LX, LY, LZ, i, j, k, ibg) = solid_interface(LX, LY, LZ, i, j, k, ibg) & !solid_node(LX, LY, LZ, i, j, k, ibg)
 

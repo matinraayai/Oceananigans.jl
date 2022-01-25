@@ -7,9 +7,6 @@ const ATD = AbstractTimeDiscretization
 
 const IBG = ImmersedBoundaryGrid
 
-const c = Center()
-const f = Face()
-
 #####
 ##### GridFittedImmersedBoundaryGrid
 #####
