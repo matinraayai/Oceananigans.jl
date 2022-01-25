@@ -65,7 +65,7 @@ const n = Nothing()
 @inline solid_interface(::Nothing, LY, ::Nothing, i, j, k, ibg) = all(solid_interface.(Ref(n), Ref(LY), Ref(c), Ref(i), Ref(j), 1:ibg.Nz, Ref(ibg)))
 @inline solid_interface(LX, ::Nothing, ::Nothing, i, j, k, ibg) = all(solid_interface.(Ref(LX), Ref(c), Ref(n), Ref(i), 1:ibg.Ny, Ref(k), Ref(ibg)))
 
-@inline solid_interface(::Nothing, ::Nothing, ::Nothing, i, j, k, ibg) = all(solid_interface.(Ref(c), Ref(n), Ref(n), 1:grid.Nx, Ref(j), Ref(k), Ref(ibg)))
+@inline solid_interface(::Nothing, ::Nothing, ::Nothing, i, j, k, ibg) = all(solid_interface.(Ref(c), Ref(n), Ref(n), 1:ibg.Nx, Ref(j), Ref(k), Ref(ibg)))
 
 @inline is_immersed_boundary(LX, LY, LZ, i, j, k, ibg) = solid_interface(LX, LY, LZ, i, j, k, ibg) & !solid_node(LX, LY, LZ, i, j, k, ibg)
 
