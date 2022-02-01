@@ -16,24 +16,37 @@ using Oceananigans.Operators: Δy_uᶠᶜᵃ, Δx_vᶜᶠᵃ, Δx_uᶠᶜᵃ, Δ
 
 @inline function ∂ⱼ_τ₁ⱼ(i, j, k, grid, closure::AbstractTurbulenceClosure, args...)
     disc = time_discretization(closure)
-    return 1/Vᶠᶜᶜ(i, j, k, grid) * (δxᶠᵃᵃ(i, j, k, grid, Ax_cᶜᶜᶜ, _viscous_flux_ux, disc, closure, args...) +
-                                    δyᵃᶜᵃ(i, j, k, grid, Ay_ζᶠᶠᶜ, _viscous_flux_uy, disc, closure, args...) +
-                                    δzᵃᵃᶜ(i, j, k, grid, Az_ηᶠᶜᵃ, _viscous_flux_uz, disc, closure, args...))
+    return ∂₁_τ₁₁(i, j, k, grid, disc, closure, args...) +
+           ∂₂_τ₁₂(i, j, k, grid, disc, closure, args...) +
+           ∂₃_τ₁₃(i, j, k, grid, disc, closure, args...)
 end
 
 @inline function ∂ⱼ_τ₂ⱼ(i, j, k, grid, closure::AbstractTurbulenceClosure, args...)
     disc = time_discretization(closure)
-    return 1/Vᶜᶠᶜ(i, j, k, grid) * (δxᶜᵃᵃ(i, j, k, grid, Ax_ζᶠᶠᶜ, _viscous_flux_vx, disc, closure, args...) +
-                                    δyᵃᶠᵃ(i, j, k, grid, Ay_cᶜᶜᶜ, _viscous_flux_vy, disc, closure, args...) +
-                                    δzᵃᵃᶜ(i, j, k, grid, Az_ξᶜᶠᵃ, _viscous_flux_vz, disc, closure, args...))
+    return  ∂₁_τ₂₁(i, j, k, grid, disc, closure, args...) +
+            ∂₂_τ₂₂(i, j, k, grid, disc, closure, args...) +
+            ∂₃_τ₂₃(i, j, k, grid, disc, closure, args...)
 end
 
 @inline function ∂ⱼ_τ₃ⱼ(i, j, k, grid, closure::AbstractTurbulenceClosure, args...)
     disc = time_discretization(closure)
-    return 1/Vᶜᶜᶠ(i, j, k, grid) * (δxᶜᵃᵃ(i, j, k, grid, Ax_ηᶠᶜᶠ, _viscous_flux_wx, disc, closure, args...) +
-                                    δyᵃᶜᵃ(i, j, k, grid, Ay_ξᶜᶠᶠ, _viscous_flux_wy, disc, closure, args...) +
-                                    δzᵃᵃᶠ(i, j, k, grid, Az_cᶜᶜᵃ, _viscous_flux_wz, disc, closure, args...))
+    return  ∂₁_τ₃₁(i, j, k, grid, disc, closure, args...) +
+            ∂₂_τ₃₂(i, j, k, grid, disc, closure, args...) +
+            ∂₃_τ₃₃(i, j, k, grid, disc, closure, args...)
 end
+
+@inline ∂₁_τ₁₁(i, j, k, grid, args...) = 1/Vᶠᶜᶜ(i, j, k, grid) * δxᶠᵃᵃ(i, j, k, grid, Ax_cᶜᶜᶜ, _viscous_flux_ux, args...)
+@inline ∂₂_τ₁₂(i, j, k, grid, args...) = 1/Vᶠᶜᶜ(i, j, k, grid) * δyᵃᶜᵃ(i, j, k, grid, Ay_ζᶠᶠᶜ, _viscous_flux_uy, args...)
+@inline ∂₃_τ₁₃(i, j, k, grid, args...) = 1/Vᶠᶜᶜ(i, j, k, grid) * δzᵃᵃᶜ(i, j, k, grid, Az_ηᶠᶜᵃ, _viscous_flux_uz, args...)
+
+@inline ∂₁_τ₂₁(i, j, k, grid, args...) = 1/Vᶠᶜᶜ(i, j, k, grid) * δxᶜᵃᵃ(i, j, k, grid, Ax_ζᶠᶠᶜ, _viscous_flux_vx, args...)
+@inline ∂₂_τ₂₂(i, j, k, grid, args...) = 1/Vᶠᶜᶜ(i, j, k, grid) * δyᵃᶠᵃ(i, j, k, grid, Ay_cᶜᶜᶜ, _viscous_flux_vy, args...)
+@inline ∂₃_τ₂₃(i, j, k, grid, args...) = 1/Vᶠᶜᶜ(i, j, k, grid) * δzᵃᵃᶜ(i, j, k, grid, Az_ξᶜᶠᵃ, _viscous_flux_vz, args...)
+
+@inline ∂₁_τ₃₁(i, j, k, grid, args...) = 1/Vᶠᶜᶜ(i, j, k, grid) * δxᶜᵃᵃ(i, j, k, grid, Ax_ηᶠᶜᶠ, _viscous_flux_wx, args...)
+@inline ∂₂_τ₃₂(i, j, k, grid, args...) = 1/Vᶠᶜᶜ(i, j, k, grid) * δyᵃᶜᵃ(i, j, k, grid, Ay_ξᶜᶠᶠ, _viscous_flux_wy, args...)
+@inline ∂₃_τ₃₃(i, j, k, grid, args...) = 1/Vᶠᶜᶜ(i, j, k, grid) * δzᵃᵃᶠ(i, j, k, grid, Az_cᶜᶜᵃ, _viscous_flux_wz, args...)
+
 
 #####
 ##### Viscosities at different locations
@@ -80,6 +93,10 @@ end
 @inline ν_uzᶠᶜᶠ(i, j, k, grid, clock, ν, u) = νᶠᶜᶠ(i, j, k, grid, clock, ν) * ∂zᶠᶜᶠ(i, j, k, grid, u)
 @inline ν_vzᶜᶠᶠ(i, j, k, grid, clock, ν, v) = νᶜᶠᶠ(i, j, k, grid, clock, ν) * ∂zᶜᶠᶠ(i, j, k, grid, v)
 
+#####
+##### 3rd order operators
+#####
+
 @inline ν_uzzzᶠᶜᶠ(i, j, k, grid, clock, ν, u) = νᶠᶜᶠ(i, j, k, grid, clock, ν) * ∂³zᵃᵃᶠ(i, j, k, grid, u)
 @inline ν_vzzzᶜᶠᶠ(i, j, k, grid, clock, ν, v) = νᶜᶠᶠ(i, j, k, grid, clock, ν) * ∂³zᵃᵃᶠ(i, j, k, grid, v)
 
@@ -108,3 +125,4 @@ end
 
 @inline ν_δ★ᶜᶜᶜ(i, j, k, grid, clock, ν, u, v) = νᶜᶜᶜ(i, j, k, grid, clock, ν) * δ★ᶜᶜᶜ(i, j, k, grid, u, v)
 @inline ν_ζ★ᶠᶠᶜ(i, j, k, grid, clock, ν, u, v) = νᶠᶠᶜ(i, j, k, grid, clock, ν) * ζ★ᶠᶠᶜ(i, j, k, grid, u, v)
+

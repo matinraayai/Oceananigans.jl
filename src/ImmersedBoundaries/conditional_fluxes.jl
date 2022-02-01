@@ -5,28 +5,32 @@ using Oceananigans.TurbulenceClosures: AbstractTurbulenceClosure, AbstractTimeDi
 const ATC = AbstractTurbulenceClosure
 const ATD = AbstractTimeDiscretization
 
-const IBG = ImmersedBoundaryGrid
-
-const c = Center()
-const f = Face()
-
 #####
 ##### GridFittedImmersedBoundaryGrid
 #####
 
-const GFIBG = ImmersedBoundaryGrid{<:Any, <:Any, <:Any, <:Any, <:Any, <:AbstractGridFittedBoundary}
-
 @inline conditional_flux_ccc(i, j, k, ibg::IBG{FT}, flux, args...) where FT = ifelse(solid_interface(c, c, c, i, j, k, ibg), zero(FT), flux(i, j, k, ibg, args...))
+@inline conditional_flux_fcc(i, j, k, ibg::IBG{FT}, flux, args...) where FT = ifelse(solid_interface(f, c, c, i, j, k, ibg), zero(FT), flux(i, j, k, ibg, args...))
+@inline conditional_flux_cfc(i, j, k, ibg::IBG{FT}, flux, args...) where FT = ifelse(solid_interface(c, f, c, i, j, k, ibg), zero(FT), flux(i, j, k, ibg, args...))
+@inline conditional_flux_ccf(i, j, k, ibg::IBG{FT}, flux, args...) where FT = ifelse(solid_interface(c, c, f, i, j, k, ibg), zero(FT), flux(i, j, k, ibg, args...))
 @inline conditional_flux_ffc(i, j, k, ibg::IBG{FT}, flux, args...) where FT = ifelse(solid_interface(f, f, c, i, j, k, ibg), zero(FT), flux(i, j, k, ibg, args...))
 @inline conditional_flux_fcf(i, j, k, ibg::IBG{FT}, flux, args...) where FT = ifelse(solid_interface(f, c, f, i, j, k, ibg), zero(FT), flux(i, j, k, ibg, args...))
 @inline conditional_flux_cff(i, j, k, ibg::IBG{FT}, flux, args...) where FT = ifelse(solid_interface(c, f, f, i, j, k, ibg), zero(FT), flux(i, j, k, ibg, args...))
 
-@inline conditional_flux_fcc(i, j, k, ibg::IBG{FT}, flux, args...) where FT = ifelse(solid_interface(f, c, c, i, j, k, ibg), zero(FT), flux(i, j, k, ibg, args...))
-@inline conditional_flux_cfc(i, j, k, ibg::IBG{FT}, flux, args...) where FT = ifelse(solid_interface(c, f, c, i, j, k, ibg), zero(FT), flux(i, j, k, ibg, args...))
-@inline conditional_flux_ccf(i, j, k, ibg::IBG{FT}, flux, args...) where FT = ifelse(solid_interface(c, c, f, i, j, k, ibg), zero(FT), flux(i, j, k, ibg, args...))
+####
+#### To ensure correct 0-flux also for higher order operators
+####
+
+@inline Ax_∂xᶠᶜᶜ(i, j, k, ibg::GFIBG, args...) = conditional_flux_fcc(i, j, k, ibg, Ax_∂xᶠᶜᶜ, args...)
+@inline Ax_∂xᶜᶜᶜ(i, j, k, ibg::GFIBG, args...) = conditional_flux_ccc(i, j, k, ibg, Ax_∂xᶜᶜᶜ, args...)
+@inline Ax_∂xᶠᶠᶜ(i, j, k, ibg::GFIBG, args...) = conditional_flux_ffc(i, j, k, ibg, Ax_∂xᶠᶠᶜ, args...)
+@inline Ay_∂yᶜᶠᶜ(i, j, k, ibg::GFIBG, args...) = conditional_flux_cfc(i, j, k, ibg, Ay_∂yᶜᶠᶜ, args...)
+@inline Ay_∂yᶠᶠᶜ(i, j, k, ibg::GFIBG, args...) = conditional_flux_ffc(i, j, k, ibg, Ay_∂yᶠᶠᶜ, args...)
+@inline Ay_∂yᶜᶜᶜ(i, j, k, ibg::GFIBG, args...) = conditional_flux_ccc(i, j, k, ibg, Ay_∂yᶜᶜᶜ, args...)
+@inline Az_∂zᶜᶜᶠ(i, j, k, ibg::GFIBG, args...) = conditional_flux_ccf(i, j, k, ibg, Az_∂zᶜᶜᶠ, args...)
 
 #####
-##### Advective fluxes
+##### Laplacian Viscous fluxes
 #####
 
 # ccc, ffc, fcf
