@@ -1,4 +1,5 @@
 using CUDA: has_cuda
+using AMDGPU: has_rocm_gpu
 using OrderedCollections: OrderedDict
 
 using Oceananigans: AbstractModel, AbstractOutputWriter, AbstractDiagnostic
@@ -125,7 +126,7 @@ function NonhydrostaticModel(;    grid,
     if arch == CUDAGPU() && !has_cuda()
         throw(ArgumentError("Cannot create a GPU model. No CUDA-enabled GPU was detected!"))
     end
-    if arch == ROCMGPU() && !AMDGPU.has_rocm_gpu()
+    if arch == ROCMGPU() && !has_rocm_gpu()
         throw(ArgumentError("Cannot create a GPU model. No ROCM-enabled GPU was detected!"))
     end
 
