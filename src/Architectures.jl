@@ -109,7 +109,7 @@ function unified_array(::CUDAGPU, arr::Array)
     return vec
 end
 
-function unified_array(::AMDGPU, arr::Array{T, N}) where {T, N}
+function unified_array(::ROCMGPU, arr::Array{T, N}) where {T, N}
     buf = AMDGPU.Mem.alloc(sizeof(arr), coherent=true)
     AMDGPU.Mem.upload!(buf, pointer(arr), sizeof(arr))
     return ROCArray{T, N}(buff, Dims(size(arr)))
