@@ -11,6 +11,7 @@ using Oceananigans.Architectures
 using Oceananigans.BoundaryConditions
 using Oceananigans.Utils
 using CUDA
+using AMDGPU
 using Adapt
 using OffsetArrays
 

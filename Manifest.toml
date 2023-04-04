@@ -105,9 +105,9 @@ version = "4.1.3"
 
 [[deps.CUDA_Driver_jll]]
 deps = ["Artifacts", "JLLWrappers", "LazyArtifacts", "Libdl", "Pkg"]
-git-tree-sha1 = "10ca2b63b496edc09258b3de5d1aa64094b18b1d"
+git-tree-sha1 = "498f45593f6ddc0adff64a9310bb6710e851781b"
 uuid = "4ee394cb-3365-5eb0-8335-949819d2adfc"
-version = "0.5.0+0"
+version = "0.5.0+1"
 
 [[deps.CUDA_Runtime_Discovery]]
 deps = ["Libdl"]
@@ -595,8 +595,10 @@ uuid = "0e08944d-e94e-41b1-9406-dcf66b6a9d2e"
 version = "0.17.10"
 
 [[deps.PencilFFTs]]
-deps = ["AbstractFFTs", "FFTW", "LinearAlgebra", "MPI", "PencilArrays", "Reexport", "TimerOutputs"]
-git-tree-sha1 = "602dc6232e4c2747035dd39a0e6569fccb9e9337"
+deps = ["AMDGPU", "AbstractFFTs", "CUDA", "FFTW", "LinearAlgebra", "MPI", "PencilArrays", "Reexport", "TimerOutputs"]
+git-tree-sha1 = "b38b579d7382058274038f6648d858b7000bd508"
+repo-rev = "master"
+repo-url = "https://github.com/matinraayai/PencilFFTs.jl"
 uuid = "4a48f351-57a6-4416-9ec4-c37015456aae"
 version = "0.14.3"
 

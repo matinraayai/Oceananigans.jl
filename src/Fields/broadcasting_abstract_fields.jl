@@ -5,6 +5,7 @@
 using Base.Broadcast: DefaultArrayStyle
 using Base.Broadcast: Broadcasted
 using CUDA
+using AMDGPU: ROCArrayStyle
 
 struct FieldBroadcastStyle <: Broadcast.AbstractArrayStyle{3} end
 
@@ -13,15 +14,17 @@ Base.Broadcast.BroadcastStyle(::Type{<:AbstractField}) = FieldBroadcastStyle()
 # Precedence rule
 Base.Broadcast.BroadcastStyle(::FieldBroadcastStyle, ::DefaultArrayStyle{N}) where N = FieldBroadcastStyle()
 Base.Broadcast.BroadcastStyle(::FieldBroadcastStyle, ::CUDA.CuArrayStyle{N}) where N = FieldBroadcastStyle()
+Base.Broadcast.BroadcastStyle(::FieldBroadcastStyle, ::ROCArrayStyle{N}) where N = FieldBroadcastStyle()
 
 # For use in Base.copy when broadcasting with numbers and arrays (useful for comparisons like f::AbstractField .== 0)
 Base.similar(bc::Broadcasted{FieldBroadcastStyle}, ::Type{ElType}) where ElType = similar(Array{ElType}, axes(bc))
 
 # Bypass style combining for in-place broadcasting with arrays / scalars to use built-in broadcasting machinery
-const BroadcastedArrayOrCuArray = Union{Broadcasted{<:DefaultArrayStyle},
-                                        Broadcasted{<:CUDA.CuArrayStyle}}
+const BroadcastedArrayOrGPUArray = Union{Broadcasted{<:DefaultArrayStyle},
+                                        Broadcasted{<:CUDA.CuArrayStyle},
+                                        Broadcasted{<:ROCArrayStyle}}
 
-@inline function Base.Broadcast.materialize!(dest::Field, bc::BroadcastedArrayOrCuArray)
+@inline function Base.Broadcast.materialize!(dest::Field, bc::BroadcastedArrayOrGPUArray)
     if any(a isa OffsetArray for a in bc.args)
         return Base.Broadcast.materialize!(dest.data, bc)
     else
@@ -33,7 +36,7 @@ end
 # Right now, this may only produce expected behavior (re: dimensionality) for
 # WindowedField that are windowed in three-dimensions. Of course, broadcasting with
 # scalar `bc` is no issue.
-@inline Base.Broadcast.materialize!(dest::WindowedField, bc::BroadcastedArrayOrCuArray) =
+@inline Base.Broadcast.materialize!(dest::WindowedField, bc::BroadcastedArrayOrGPUArray) =
     Base.Broadcast.materialize!(parent(dest), bc)
 
 #####
@@ -60,7 +63,7 @@ broadcasted_to_abstract_operation(loc, grid, a) = a
 # so we bypass the infrastructure for checking axes compatibility,
 # and head straight to copyto! from materialize!.
 @inline Base.Broadcast.materialize!(::Base.Broadcast.BroadcastStyle,
-                                    dest::Field,
+                                    dest::AbstractField,
                                     bc::Broadcasted{<:FieldBroadcastStyle}) = copyto!(dest, convert(Broadcasted{Nothing}, bc))
 
 @inline function Base.copyto!(dest::Field, bc::Broadcasted{Nothing})

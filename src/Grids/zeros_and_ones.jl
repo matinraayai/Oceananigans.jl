@@ -1,10 +1,11 @@
 using CUDA
-using Oceananigans.Architectures: CPU, GPU, AbstractArchitecture
+using AMDGPU
+using Oceananigans.Architectures: CPU, CUDAGPU, AMDGPU, AbstractArchitecture
 
 import Base: zeros
 
-zeros(FT, ::CPU, N...) = zeros(FT, N...)
-zeros(FT, ::GPU, N...) = CUDA.zeros(FT, N...)
+zeros(FT, ::CUDAGPU, N...) = CUDA.zeros(FT, N...)
+zeros(FT, ::ROCMGPU, N...) = AMDGPU.ROCArray(zeros(FT, N...))
 
 zeros(arch::AbstractArchitecture, grid, N...) = zeros(eltype(grid), arch, N...)
 zeros(grid::AbstractGrid, N...) = zeros(eltype(grid), architecture(grid), N...)

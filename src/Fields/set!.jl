@@ -1,9 +1,10 @@
 using CUDA
+using AMDGPU
 using KernelAbstractions: @kernel, @index
 using Adapt: adapt_structure
 
 using Oceananigans.Grids: on_architecture
-using Oceananigans.Architectures: device, GPU, CPU
+using Oceananigans.Architectures: device, CUDAGPU, ROCMGPU, CPU
 using Oceananigans.Utils: work_layout
 
 function set!(Φ::NamedTuple; kwargs...)
@@ -34,7 +35,7 @@ function set!(u::Field, f::Function)
     return u
 end
 
-function set!(u::Field, f::Union{Array, CuArray, OffsetArray})
+function set!(u::Field, f::Union{Array, ROCArray, CuArray, OffsetArray})
     f = arch_array(architecture(u), f)
     u .= f
     return u

@@ -101,7 +101,7 @@ function MultigridSolver(linear_operation!::Function,
 
     arch = architecture(template_field)
 
-    (arch == GPU() && !hasamgx) && error("Multigrid on the GPU requires a linux operating system due to AMGX.jl")
+    (arch == CUDAGPU() && !hasamgx) && error("Multigrid on the GPU requires a linux operating system due to AMGX.jl")
 
     matrix = initialize_matrix(arch, template_field, linear_operation!, args...)
 
@@ -118,7 +118,7 @@ function MultigridSolver(matrix;
 
     arch = architecture(template_field)
 
-    (arch == GPU() && !hasamgx) && error("Multigrid on the GPU requires a linux operating system due to AMGX.jl")
+    (arch == CUDAGPU() && !hasamgx) && error("Multigrid on the GPU requires a linux operating system due to AMGX.jl")
 
     Nx, Ny, Nz = size(template_field)
 
@@ -157,7 +157,7 @@ function MultigridSolver_on_architecture(::CPU;
                               )
 end
 
-function MultigridSolver_on_architecture(::GPU;
+function MultigridSolver_on_architecture(::CUDAGPU;
                                          template_field::AbstractField,
                                          maxiter,
                                          reltol,
@@ -170,7 +170,7 @@ function MultigridSolver_on_architecture(::GPU;
 
     amgx_solver = AMGXMultigridSolver(matrix, maxiter, reltol, abstol)
 
-    return MultigridGPUSolver(GPU(),
+    return MultigridGPUSolver(CUDAGPU(),
                               template_field.grid,
                               matrix,
                               abstol,
@@ -243,7 +243,7 @@ function initialize_matrix(::CPU, template_field, linear_operator!, args...)
     return A
 end
 
-function initialize_matrix(::GPU, template_field, linear_operator!, args...)
+function initialize_matrix(::CUDAGPU, template_field, linear_operator!, args...)
     Nx, Ny, Nz = size(template_field)
     FT = eltype(template_field.grid)
 
@@ -323,7 +323,7 @@ end
 Initialize the AMGX package required to use the multigrid solver on `architecture`. 
 This function needs to be called before creating a multigrid solver on GPU.
 """
-function initialize_AMGX(::GPU)
+function initialize_AMGX(::CUDAGPU)
     try
         AMGX.initialize(); AMGX.initialize_plugins()
     catch e
@@ -343,7 +343,7 @@ initialize_AMGX(::CPU) = nothing
 Finalize the AMGX package required to use the multigrid solver on `architecture`. 
 This should be called after `finalize_solver!`.
 """
-function finalize_AMGX(::GPU)
+function finalize_AMGX(::CUDAGPU)
     AMGX.finalize_plugins(); AMGX.finalize()
 end
 
