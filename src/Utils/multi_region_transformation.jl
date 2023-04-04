@@ -1,4 +1,5 @@
 using CUDA: CuArray, CuDevice, CuContext, CuPtr, device, device!, synchronize
+using AMDGPU: ROCArray, ROCQueue, ROCDevice
 using OffsetArrays
 using Oceananigans.Grids: AbstractGrid
 
