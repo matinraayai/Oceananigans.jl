@@ -6,6 +6,8 @@ using LinearAlgebra
 using Logging
 
 using CUDA
+using AMDGPU
+using GPUArrays
 using MPI
 using JLD2
 using FFTW

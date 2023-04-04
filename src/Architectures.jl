@@ -32,16 +32,16 @@ struct CPU <: AbstractArchitecture end
 
 Run Oceananigans on a single NVIDIA CUDA GPU.
 """
-struct GPU{D} <: AbstractArchitecture
-    device :: D
+struct GPU{B} <: AbstractArchitecture
+    backend :: B
 end
 
-const CUDAGPU = GPU{<:CUDAKernels.CUDADevice}
-const ROCMGPU = GPU{<:ROCKernels.ROCDevice}
+const CUDAGPU = GPU{<:CUDAKernels.CUDABackend}
+const ROCMGPU = GPU{<:ROCKernels.ROCBackend}
 
 # Convenience, non-public constructors (may be better to remove these eventually for code clarity)
-CUDAGPU() = GPU(CUDAKernels.CUDADevice())
-ROCMGPU() = GPU(ROCKernels.ROCDevice())
+CUDAGPU() = GPU(CUDAKernels.CUDABackend())
+ROCMGPU() = GPU(ROCKernels.ROCBackend())
 
 #####
 ##### These methods are extended in Distributed.jl
@@ -49,7 +49,7 @@ ROCMGPU() = GPU(ROCKernels.ROCDevice())
 
 device(::CPU) = KernelAbstractions.CPU()
 device(::CUDAGPU) = CUDAKernels.CUDABackend(;always_inline=true)
-device(::ROCMGPU) = ROCKernels.ROCDevice()
+device(::ROCMGPU) = ROCKernels.ROCBackend()
 
 architecture() = nothing
 architecture(::Number) = nothing
