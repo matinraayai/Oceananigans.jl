@@ -4,6 +4,7 @@ using Oceananigans.Architectures: CPU, CUDAGPU, AMDGPU, GPU, AbstractArchitectur
 
 import Base: zeros
 
+zeros(FT, ::CPU, N...) = zeros(FT, N...)
 zeros(FT, ::CUDAGPU, N...) = CUDA.zeros(FT, N...)
 zeros(FT, ::ROCMGPU, N...) = AMDGPU.ROCArray(zeros(FT, N...))
 
