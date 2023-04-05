@@ -6,8 +6,8 @@ project_hash = "c23c3685da034af955215abfa164672beb2f7460"
 
 [[deps.AMDGPU]]
 deps = ["AbstractFFTs", "Adapt", "BinaryProvider", "CEnum", "ExprTools", "GPUArrays", "GPUCompiler", "HIP_jll", "KernelAbstractions", "LLD_jll", "LLVM", "LLVM_jll", "Libdl", "LinearAlgebra", "MacroTools", "MsgPack", "ObjectFile", "Pkg", "Preferences", "Printf", "ROCmDeviceLibs_jll", "Random", "Setfield", "SpecialFunctions", "Statistics", "TimespanLogging", "UnsafeAtomicsLLVM", "hsa_rocr_jll", "rocBLAS_jll", "rocRAND_jll", "rocSPARSE_jll"]
-git-tree-sha1 = "d053717aca4ea8d0924331fc9ce527b7ae61eeba"
-repo-rev = "pxl-th/gpucompiler-update"
+git-tree-sha1 = "33454679fc28d188f8031a5402819e56f0280fe9"
+repo-rev = "master"
 repo-url = "https://github.com/JuliaGPU/AMDGPU.jl.git"
 uuid = "21141c5a-9bdb-4563-92ae-f87d6854732e"
 version = "0.4.8"
@@ -117,9 +117,9 @@ version = "0.2.0"
 
 [[deps.CUDA_Runtime_jll]]
 deps = ["Artifacts", "CUDA_Driver_jll", "JLLWrappers", "LazyArtifacts", "Libdl", "TOML"]
-git-tree-sha1 = "802b1f2220fd43251d343219adf478e6b7992bd4"
+git-tree-sha1 = "9ac3ffda60eeae5291be20f35ca264eb8e95bbc6"
 uuid = "76a88914-d11a-5bdc-97e0-2f5a05c973a2"
-version = "0.5.0+0"
+version = "0.5.0+1"
 
 [[deps.ChainRulesCore]]
 deps = ["Compat", "LinearAlgebra", "SparseArrays"]
